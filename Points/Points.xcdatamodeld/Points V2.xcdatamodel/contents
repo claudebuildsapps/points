@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23605" systemVersion="24D70" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="CoreDataDate" representedClassName="CoreDataDate" syncable="YES" codeGenerationType="class">
+        <attribute name="date" attributeType="Date" defaultDateTimeInterval="757549080" usesScalarValueType="NO"/>
+        <attribute name="target" attributeType="Integer 16" defaultValueString="100" usesScalarValueType="YES"/>
+        <relationship name="completions" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CoreDataTaskCompletion" inverseName="date" inverseEntity="CoreDataTaskCompletion"/>
+        <relationship name="tasks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CoreDataTask" inverseName="date" inverseEntity="CoreDataTask"/>
+    </entity>
+    <entity name="CoreDataTask" representedClassName="CoreDataTask" syncable="YES" codeGenerationType="class">
+        <attribute name="active" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="bonus" attributeType="Decimal" defaultValueString="0.0"/>
+        <attribute name="completed" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="max" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="optional" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="points" attributeType="Decimal" defaultValueString="0"/>
+        <attribute name="position" optional="YES" attributeType="Integer 16" usesScalarValueType="YES"/>
+        <attribute name="reward" attributeType="Decimal" defaultValueString="0.0"/>
+        <attribute name="routine" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="scalar" attributeType="Decimal" defaultValueString="1"/>
+        <attribute name="target" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="title" attributeType="String" defaultValueString=""/>
+        <relationship name="completions" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CoreDataTaskCompletion" inverseName="task" inverseEntity="CoreDataTaskCompletion"/>
+        <relationship name="date" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CoreDataDate" inverseName="tasks" inverseEntity="CoreDataDate"/>
+        <relationship name="instances" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CoreDataTask" inverseName="source" inverseEntity="CoreDataTask"/>
+        <relationship name="source" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CoreDataTask" inverseName="instances" inverseEntity="CoreDataTask"/>
+    </entity>
+    <entity name="CoreDataTaskCompletion" representedClassName="CoreDataTaskCompletion" syncable="YES" codeGenerationType="class">
+        <attribute name="timestamp" attributeType="Date" defaultDateTimeInterval="757821240" usesScalarValueType="NO"/>
+        <relationship name="date" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CoreDataDate" inverseName="completions" inverseEntity="CoreDataDate"/>
+        <relationship name="task" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CoreDataTask" inverseName="completions" inverseEntity="CoreDataTask"/>
+    </entity>
+</model>
