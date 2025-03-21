@@ -37,10 +37,11 @@ class TaskTableViewCell: UITableViewCell {
     // New date label
     private let dateLabel: UILabel
     
-    // New UI elements
+    // UI elements
     private let undoButton: UIButton
     private let editButton: UIButton
     private let editButtonContainer: UIView
+    private let undoButtonContainer: UIView
     
     // MARK: - Initialization
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -58,11 +59,12 @@ class TaskTableViewCell: UITableViewCell {
         dateLbl.translatesAutoresizingMaskIntoConstraints = false
         self.dateLabel = dateLbl
         
-        // Initialize new buttons
+        // Initialize undo button (now as an icon next to edit button)
         let undoBtn = UIButton(type: .system)
-        undoBtn.setTitle("Undo", for: .normal)
-        undoBtn.titleLabel?.font = UIFont.systemFont(ofSize: 9, weight: .regular)
-        undoBtn.setTitleColor(.systemBlue, for: .normal)
+        let undoConfig = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        let undoImage = UIImage(systemName: "arrow.uturn.backward", withConfiguration: undoConfig)
+        undoBtn.setImage(undoImage, for: .normal)
+        undoBtn.tintColor = .systemGray
         undoBtn.translatesAutoresizingMaskIntoConstraints = false
         self.undoButton = undoBtn
         
@@ -78,6 +80,11 @@ class TaskTableViewCell: UITableViewCell {
         editContainer.translatesAutoresizingMaskIntoConstraints = false
         editContainer.backgroundColor = .clear  // Make it invisible
         self.editButtonContainer = editContainer
+        
+        let undoContainer = UIView()
+        undoContainer.translatesAutoresizingMaskIntoConstraints = false
+        undoContainer.backgroundColor = .clear  // Make it invisible
+        self.undoButtonContainer = undoContainer
 
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         
@@ -103,11 +110,12 @@ class TaskTableViewCell: UITableViewCell {
         dateLbl.translatesAutoresizingMaskIntoConstraints = false
         self.dateLabel = dateLbl
         
-        // Initialize new buttons
+        // Initialize undo button (now as an icon next to edit button)
         let undoBtn = UIButton(type: .system)
-        undoBtn.setTitle("Undo", for: .normal)
-        undoBtn.titleLabel?.font = UIFont.systemFont(ofSize: 9, weight: .regular)
-        undoBtn.setTitleColor(.systemBlue, for: .normal)
+        let undoConfig = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        let undoImage = UIImage(systemName: "arrow.uturn.backward", withConfiguration: undoConfig)
+        undoBtn.setImage(undoImage, for: .normal)
+        undoBtn.tintColor = .systemGray
         undoBtn.translatesAutoresizingMaskIntoConstraints = false
         self.undoButton = undoBtn
         
@@ -123,6 +131,11 @@ class TaskTableViewCell: UITableViewCell {
         editContainer.translatesAutoresizingMaskIntoConstraints = false
         editContainer.backgroundColor = .clear  // Make it invisible
         self.editButtonContainer = editContainer
+        
+        let undoContainer = UIView()
+        undoContainer.translatesAutoresizingMaskIntoConstraints = false
+        undoContainer.backgroundColor = .clear  // Make it invisible
+        self.undoButtonContainer = undoContainer
         super.init(coder: coder)
         
         // Initialize controllers after super.init since they need self
@@ -148,12 +161,14 @@ class TaskTableViewCell: UITableViewCell {
         swipeController.setupSwipeGestures(in: contentView)
         
         // Set up button actions
+        let undoTapGesture = UITapGestureRecognizer(target: self, action: #selector(undoButtonTapped))
+        undoButtonContainer.addGestureRecognizer(undoTapGesture)
+        undoButtonContainer.isUserInteractionEnabled = true
         undoButton.addTarget(self, action: #selector(undoButtonTapped), for: .touchUpInside)
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(editButtonTapped))
-        editButtonContainer.addGestureRecognizer(tapGesture)
-
+        
+        let editTapGesture = UITapGestureRecognizer(target: self, action: #selector(editButtonTapped))
+        editButtonContainer.addGestureRecognizer(editTapGesture)
         editButtonContainer.isUserInteractionEnabled = true
-
         editButton.addTarget(self, action: #selector(editButtonTapped), for: .touchUpInside)
     }
     
@@ -167,8 +182,10 @@ class TaskTableViewCell: UITableViewCell {
         contentView.addSubview(completionTitleLabel)
         contentView.addSubview(undoButton)
         contentView.addSubview(editButton)
-        contentView.bringSubviewToFront(editButton)
         contentView.addSubview(editButtonContainer)
+        contentView.addSubview(undoButtonContainer)
+        contentView.bringSubviewToFront(editButton)
+        contentView.bringSubviewToFront(undoButton)
 
         // Setup constraints for normal state
         NSLayoutConstraint.activate([
@@ -177,24 +194,32 @@ class TaskTableViewCell: UITableViewCell {
             pointsTitleLabel.topAnchor.constraint(equalTo: displayPointsLabel.bottomAnchor, constant: -2),
             pointsTitleLabel.widthAnchor.constraint(equalToConstant: 50),
             
-            // Edit button (pencil icon) to the left of points
-            editButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
-
-            // Edit button container - make it a larger tap area
+            // Edit button container - make it a dedicated tap area for edit button
             editButtonContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             editButtonContainer.topAnchor.constraint(equalTo: contentView.topAnchor),
             editButtonContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            editButtonContainer.widthAnchor.constraint(equalToConstant: 60), // Wider area for tapping
+            editButtonContainer.widthAnchor.constraint(equalToConstant: 45), // Just enough for the edit button
             
-            // Edit button (pencil icon) centered in its container
-            editButton.centerXAnchor.constraint(equalTo: editButtonContainer.centerXAnchor, constant: 5),
+            // Undo button container - dedicated tap area for undo
+            undoButtonContainer.leadingAnchor.constraint(equalTo: editButtonContainer.trailingAnchor),
+            undoButtonContainer.topAnchor.constraint(equalTo: contentView.topAnchor),
+            undoButtonContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            undoButtonContainer.widthAnchor.constraint(equalToConstant: 45), // Just enough for the undo button
+            
+            // Edit button (pencil icon) positioned in its container
+            editButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
             editButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             editButton.widthAnchor.constraint(equalToConstant: 30),
             editButton.heightAnchor.constraint(equalToConstant: 30),
-
-        
+            
+            // Undo button right next to edit button
+            undoButton.leadingAnchor.constraint(equalTo: editButton.trailingAnchor, constant: 5),
+            undoButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            undoButton.widthAnchor.constraint(equalToConstant: 30),
+            undoButton.heightAnchor.constraint(equalToConstant: 30),
+            
             // Points label (left side)
-            displayPointsLabel.leadingAnchor.constraint(equalTo: editButtonContainer.trailingAnchor, constant: 0),
+            displayPointsLabel.leadingAnchor.constraint(equalTo: undoButtonContainer.trailingAnchor, constant: 0),
             displayPointsLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor, constant: -4),
             displayPointsLabel.widthAnchor.constraint(equalToConstant: 50),
             
@@ -217,12 +242,6 @@ class TaskTableViewCell: UITableViewCell {
             completionTitleLabel.topAnchor.constraint(equalTo: completionLabel.bottomAnchor, constant: -2),
             completionTitleLabel.widthAnchor.constraint(equalToConstant: 45),
             
-            // Undo button below completion title
-            undoButton.centerXAnchor.constraint(equalTo: completionLabel.centerXAnchor),
-            undoButton.topAnchor.constraint(equalTo: completionTitleLabel.bottomAnchor, constant: 0),
-            undoButton.widthAnchor.constraint(equalToConstant: 45),
-            undoButton.heightAnchor.constraint(equalToConstant: 14),
-
             // Make title label fill remaining space
             taskTitleLabel.trailingAnchor.constraint(equalTo: completionLabel.leadingAnchor, constant: -8),
             
