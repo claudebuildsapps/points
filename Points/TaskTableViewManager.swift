@@ -109,7 +109,7 @@ class TaskTableViewManager: NSObject, UITableViewDelegate, UITableViewDataSource
         // Get cell and check if it's expanded
         if let cell = tableView.cellForRow(at: indexPath) as? TaskTableViewCell, cell.isExpanded {
             // Normal height + edit UI height
-            return 60 + 230 // Adjust the edit UI height as needed
+            return 60 + 350 // Adjust the edit UI height as needed
         }
         
         return 60 // Your fixed normal cell height
