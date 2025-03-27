@@ -21,7 +21,7 @@ class ViewController: UIViewController, TaskTableViewManagerDelegate, TabBarView
     
     private let progressBarView = ProgressBarView()
     private let tabBarView = TabBarView()
-    private let pointsDisplayView = PointsDisplayView()
+    private let pointsDisplayView = FooterDisplayView()
     
     private lazy var taskTableManager: TaskTableViewManager = {
         TaskTableViewManager(tableView: tableView, delegate: self)
@@ -60,8 +60,14 @@ class ViewController: UIViewController, TaskTableViewManagerDelegate, TabBarView
         dateNavigationView.configure(with: context)
         
         // Wire up the red reset button
-        pointsDisplayView.setResetButtonTarget(self, action: #selector(resetAllTasks))
-        
+        pointsDisplayView.setClearButtonTarget(self, action: #selector(resetAllTasks))
+
+        // 2. Blue refresh button (new soft reset button)
+        pointsDisplayView.setSoftResetButtonTarget(self, action: #selector(softResetTasks))
+
+        // 3. Green + button (keeping existing functionality)
+        pointsDisplayView.setAddButtonTarget(self, action: #selector(addNewTask))
+
         loadInitialData()
     }
 
@@ -180,7 +186,6 @@ class ViewController: UIViewController, TaskTableViewManagerDelegate, TabBarView
             print("Loaded \(tasks.count) existing tasks")
         }
         updateUI()
-        updateTabTitles()
     }
     
     private func updateUI() {
@@ -190,14 +195,7 @@ class ViewController: UIViewController, TaskTableViewManagerDelegate, TabBarView
         pointsDisplayView.updatePoints(totalPoints)
         taskTableManager.updateTasks(tasks)
     }
-    
-    private func updateTabTitles() {
-        if tasks.count >= 4 {
-            let titles = Array(tasks.prefix(4)).map { $0.title ?? "Tab" }
-            tabBarView.setTabTitles(titles)
-        }
-    }
-    
+        
     // MARK: - Actions
     @objc private func addNewTask() {
         if let dateEntity = currentDateEntity {
@@ -235,11 +233,39 @@ class ViewController: UIViewController, TaskTableViewManagerDelegate, TabBarView
         }
     }
     
-    // MARK: - TabBarViewDelegate Methods
     func didSelectTab(at index: Int) {
         print("Selected tab at index: \(index)")
-        // Implement your tab-specific logic here (e.g., filter tasks by tab index)
+        
+        // Handle different tab selections
+        switch index {
+        case 0: // Routines
+            // Filter to show only routine tasks
+            tasks = taskManager.fetchTasks().filter { $0.routine }
+            updateUI()
+            
+        case 1: // Tasks
+            // Show all tasks
+            tasks = taskManager.fetchTasks()
+            updateUI()
+            
+        case 2: // Templates
+            // Handle template tasks (you'll need to implement this functionality)
+            // For example, you might filter tasks that have a template flag
+            print("Template tab selected - implement template functionality")
+            
+        case 3: // Summary
+            // Show summary view or filtered tasks
+            print("Summary tab selected - implement summary functionality")
+            
+        case 4: // Data
+            // Data tab is handled in the TabBarView class (shows CoreData debug)
+            print("Data tab selected")
+            
+        default:
+            break
+        }
     }
+
     
     // MARK: - TaskTableViewManagerDelegate Methods
     func didSelectTask(_ task: CoreDataTask) {
@@ -357,6 +383,18 @@ class ViewController: UIViewController, TaskTableViewManagerDelegate, TabBarView
             print("All tasks were deleted successfully!")
         } else {
             print("Failed to delete all tasks.")
+        }
+    }
+    
+    @objc private func softResetTasks() {
+        if taskManager.softReset() {
+            // Reload the tasks after soft reset
+            tasks = taskManager.fetchTasks()
+            // Update UI to reflect changes
+            updateUI()
+            print("Tasks were soft reset successfully!")
+        } else {
+            print("Failed to soft reset tasks.")
         }
     }
 }

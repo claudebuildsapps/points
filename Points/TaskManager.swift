@@ -207,6 +207,25 @@ class TaskManager {
         task.position = position
         saveContext()
     }
+    
+    // Add this method to your TaskManager class
+
+    func softReset() -> Bool {
+        // If no tasks exist, recreate initial tasks
+        if fetchTasks().isEmpty {
+            createInitialTasksIfNeeded()
+            return true
+        }
+        
+        // Otherwise, reset tasks to their initial state (completed = 0)
+        let allTasks = fetchTasks()
+        for task in allTasks {
+            task.completed = 0
+        }
+        
+        saveContext()
+        return true
+    }
 }
 
 // Extension for CoreDataTask to use apply

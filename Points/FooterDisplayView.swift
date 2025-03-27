@@ -1,11 +1,11 @@
 import UIKit
 import SnapKit
 
-class PointsDisplayView: UIView {
+class FooterDisplayView: UIView {
     private let pointsLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 22, weight: .bold)
+        label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textColor = .label
         label.text = "0"
         return label
@@ -29,58 +29,86 @@ class PointsDisplayView: UIView {
         return button
     }()
     
-    private let resetButton: UIButton = {
+    private let clearButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setImage(UIImage(systemName: "arrow.clockwise.circle.fill"), for: .normal)
+        button.setImage(UIImage(systemName: "xmark.circle.fill"), for: .normal)
         button.tintColor = .systemRed
         return button
     }()
     
-    // Add a method to set the target for the add button
+    private let softResetButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.setImage(UIImage(systemName: "arrow.clockwise.circle.fill"), for: .normal)
+        button.tintColor = .systemBlue
+        return button
+    }()
+    
+    // Add a method to fully reload the UI
+    func fullReloadUI() {
+        // Reset points to 0
+        updatePoints(0, animated: false)
+        
+        // Remove all subviews and recreate the view
+        subviews.forEach { $0.removeFromSuperview() }
+        setupView()
+        
+        // You can add additional reset logic here, such as:
+        // - Resetting any associated data models
+        // - Clearing any temporary states
+        // - Notifying a delegate about the full reset
+        
+        // Optional: Trigger a layout update
+        setNeedsLayout()
+        layoutIfNeeded()
+    }
+    
     func setAddButtonTarget(_ target: Any?, action: Selector) {
         addButton.addTarget(target, action: action, for: .touchUpInside)
     }
     
-    // Add a method to set the target for the reset button
-    func setResetButtonTarget(_ target: Any?, action: Selector) {
-        resetButton.addTarget(target, action: action, for: .touchUpInside)
+    func setClearButtonTarget(_ target: Any?, action: Selector) {
+        clearButton.addTarget(target, action: action, for: .touchUpInside)
+    }
+    
+    func setSoftResetButtonTarget(_ target: Any?, action: Selector) {
+        softResetButton.addTarget(target, action: action, for: .touchUpInside)
     }
     
     private func setupView() {
         backgroundColor = .clear
         addSubview(pointsLabel)
         addSubview(addButton)
-        addSubview(resetButton)
+        addSubview(clearButton)
+        addSubview(softResetButton)
 
-        // Larger font and better buttons
-        pointsLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        let largeConfig = UIImage.SymbolConfiguration(pointSize: 32, weight: .regular)
         
-        // Configure add button with larger icon
-        let largeConfig = UIImage.SymbolConfiguration(pointSize: 32, weight: .regular) // 20% smaller than 40
         addButton.setImage(UIImage(systemName: "plus.circle.fill", withConfiguration: largeConfig), for: .normal)
         addButton.tintColor = .systemGreen
         addButton.contentMode = .center
         addButton.imageView?.contentMode = .scaleAspectFit
         
-        // Configure reset button with larger icon
-        resetButton.setImage(UIImage(systemName: "arrow.clockwise.circle.fill", withConfiguration: largeConfig), for: .normal)
-        resetButton.tintColor = .systemRed
-        resetButton.contentMode = .center
-        resetButton.imageView?.contentMode = .scaleAspectFit
+        clearButton.setImage(UIImage(systemName: "xmark.circle.fill", withConfiguration: largeConfig), for: .normal)
+        clearButton.tintColor = .systemRed
+        clearButton.contentMode = .center
+        clearButton.imageView?.contentMode = .scaleAspectFit
         
-        // Make buttons larger (40% bigger than the current size of 52)
-        let buttonSize: CGFloat = 52 * 1.4 // Increase size by 40%
+        softResetButton.setImage(UIImage(systemName: "arrow.clockwise.circle.fill", withConfiguration: largeConfig), for: .normal)
+        softResetButton.tintColor = .systemBlue
+        softResetButton.contentMode = .center
+        softResetButton.imageView?.contentMode = .scaleAspectFit
         
-        // Add subtle shadow to make buttons stand out
-        [addButton, resetButton].forEach { button in
+        let buttonSize: CGFloat = 52 * 1.4
+        
+        [addButton, clearButton, softResetButton].forEach { button in
             button.layer.shadowColor = UIColor.black.cgColor
             button.layer.shadowOffset = CGSize(width: 0, height: 1)
             button.layer.shadowRadius = 2
             button.layer.shadowOpacity = 0.2
         }
 
-        // Use SnapKit for more concise constraints
         pointsLabel.snp.makeConstraints { make in
             make.leading.equalToSuperview().offset(8)
             make.centerY.equalToSuperview()
@@ -92,8 +120,14 @@ class PointsDisplayView: UIView {
             make.size.equalTo(CGSize(width: buttonSize, height: buttonSize))
         }
         
-        resetButton.snp.makeConstraints { make in
+        clearButton.snp.makeConstraints { make in
             make.trailing.equalTo(addButton.snp.leading).offset(-12)
+            make.centerY.equalToSuperview()
+            make.size.equalTo(CGSize(width: buttonSize, height: buttonSize))
+        }
+        
+        softResetButton.snp.makeConstraints { make in
+            make.trailing.equalTo(clearButton.snp.leading).offset(-12)
             make.centerY.equalToSuperview()
             make.size.equalTo(CGSize(width: buttonSize, height: buttonSize))
         }
@@ -115,13 +149,11 @@ class PointsDisplayView: UIView {
         let oldPoints = getCurrentPoints()
         let duration: TimeInterval = 0.75
         
-        // Counter animation for points
         let startTime = CACurrentMediaTime()
         let timer = CADisplayLink(target: self, selector: #selector(updatePointsCounter))
         timer.preferredFramesPerSecond = 30
         timer.add(to: .main, forMode: .common)
         
-        // Store animation values in the timer using associated objects
         objc_setAssociatedObject(timer, UnsafeRawPointer(bitPattern: 1)!, startTime, .OBJC_ASSOCIATION_RETAIN)
         objc_setAssociatedObject(timer, UnsafeRawPointer(bitPattern: 2)!, duration, .OBJC_ASSOCIATION_RETAIN)
         objc_setAssociatedObject(timer, UnsafeRawPointer(bitPattern: 3)!, oldPoints, .OBJC_ASSOCIATION_RETAIN)

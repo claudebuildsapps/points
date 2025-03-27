@@ -47,6 +47,24 @@ class TaskCellEditController: NSObject {
         // Set up the edit controls
         setupEditControls()
     }
+    
+    private func setupKeyboardObservers() {
+        // Register for keyboard notifications
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillShow),
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillHide),
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil
+        )
+    }
+
 
     private func setupEditControls() {
         // Create UI elements
@@ -290,6 +308,15 @@ class TaskCellEditController: NSObject {
             make.top.equalTo(optionalLabel.snp.bottom).offset(4)
             make.centerX.equalToSuperview()
         }
+        
+        // Set up field delegates for navigation between fields
+        setupTextFieldDelegates()
+
+        // Apply enhanced input accessory view to all text fields
+        applyAccessoryViewToAllTextFields()
+
+        // Set up keyboard observers to handle scrolling
+        setupKeyboardObservers()
     }
 
     // MARK: - Configuration
@@ -553,12 +580,88 @@ class TaskCellEditController: NSObject {
     }
 
     @objc private func keyboardWillShow(notification: NSNotification) {
-        // Make sure save/cancel buttons remain accessible when keyboard shows
-        // You can adjust the cell/container if needed here
+        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let cell = self.cell else {
+            return
+        }
+        
+        // Find the parent tableView
+        var tableView: UITableView?
+        var currentView: UIView? = cell
+        
+        while currentView != nil && tableView == nil {
+            currentView = currentView?.superview
+            if let foundTableView = currentView as? UITableView {
+                tableView = foundTableView
+            }
+        }
+        
+        guard let tableView = tableView else { return }
+        
+        // Calculate the edit container's global frame
+        guard let containerGlobalFrame = editContainer.superview?.convert(editContainer.frame, to: nil) else {
+            return
+        }
+        
+        // Calculate the cell's global frame
+        guard let cellGlobalFrame = cell.superview?.convert(cell.frame, to: nil) else {
+            return
+        }
+        
+        // Calculate which part of the edit container is below the keyboard
+        let bottomOfVisibleArea = keyboardFrame.origin.y
+        let bottomOfEditContainer = containerGlobalFrame.origin.y + containerGlobalFrame.size.height
+        
+        // Calculate the overlap
+        let overlapHeight = max(0, bottomOfEditContainer - bottomOfVisibleArea)
+        
+        if overlapHeight > 0 {
+            // We need to scroll to make the entire edit area visible
+            let cellPositionInTable = tableView.convert(cell.frame.origin, from: cell.superview)
+            
+            // Calculate new offset that will show the entire edit container
+            let newOffset = cellPositionInTable.y - (tableView.contentInset.top + 20) + overlapHeight
+            
+            // Adjust the table's content offset to make the cell's edit area visible
+            UIView.animate(withDuration: 0.3) {
+                tableView.setContentOffset(CGPoint(x: 0, y: max(0, newOffset)), animated: false)
+            }
+            
+            // Store the original offset to restore later if needed
+            self.originalTableOffset = tableView.contentOffset
+        }
     }
+
+    // Add this property to store the original table offset
+    private var originalTableOffset: CGPoint?
 
     @objc private func keyboardWillHide(notification: NSNotification) {
         // Reset any adjustments made when keyboard was shown
+        // Optionally restore original table offset if desired
+        if let originalOffset = originalTableOffset {
+            guard let cell = self.cell else { return }
+            
+            // Find the parent tableView
+            var tableView: UITableView?
+            var currentView: UIView? = cell
+            
+            while currentView != nil && tableView == nil {
+                currentView = currentView?.superview
+                if let foundTableView = currentView as? UITableView {
+                    tableView = foundTableView
+                }
+            }
+            
+            guard let tableView = tableView else { return }
+            
+            // Animate back to original position
+            UIView.animate(withDuration: 0.3) {
+                tableView.setContentOffset(originalOffset, animated: false)
+            }
+            
+            // Clear stored offset
+            self.originalTableOffset = nil
+        }
     }
 
     // Don't forget to remove observers in deinit
@@ -591,6 +694,79 @@ class TaskCellEditController: NSObject {
     private var tapGestureRecognizer: UITapGestureRecognizer?
 
 
+    
+    private func createInputAccessoryView() -> UIView {
+        // Create a container view to hold our buttons
+        let containerView = UIView()
+        containerView.backgroundColor = UIColor.systemBackground
+        
+        // Add a subtle top border to the container
+        let borderView = UIView()
+        borderView.backgroundColor = UIColor.systemGray5
+        
+        // Create cancel button with appropriate styling
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .regular)
+        cancelButton.backgroundColor = UIColor.systemRed.withAlphaComponent(0.1)
+        cancelButton.setTitleColor(.systemRed, for: .normal)
+        cancelButton.layer.cornerRadius = 8
+        cancelButton.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
+        
+        // Create save button with appropriate styling
+        let saveButton = UIButton(type: .system)
+        saveButton.setTitle("Save", for: .normal)
+        saveButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+        saveButton.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.1)
+        saveButton.setTitleColor(.systemGreen, for: .normal)
+        saveButton.layer.cornerRadius = 8
+        saveButton.addTarget(self, action: #selector(saveButtonTapped), for: .touchUpInside)
+        
+        // Add subviews to container
+        containerView.addSubview(borderView)
+        containerView.addSubview(cancelButton)
+        containerView.addSubview(saveButton)
+        
+        // Use SnapKit to layout the views
+        containerView.snp.makeConstraints { make in
+            make.height.equalTo(50)
+            make.width.equalTo(UIScreen.main.bounds.width)
+        }
+        
+        borderView.snp.makeConstraints { make in
+            make.top.leading.trailing.equalToSuperview()
+            make.height.equalTo(0.5)
+        }
+        
+        cancelButton.snp.makeConstraints { make in
+            make.leading.equalToSuperview().offset(12)
+            make.centerY.equalToSuperview()
+            make.width.equalToSuperview().multipliedBy(0.45)  // Equal width with a slight margin
+            make.height.equalTo(36)
+        }
+        
+        saveButton.snp.makeConstraints { make in
+            make.trailing.equalToSuperview().offset(-12)
+            make.centerY.equalToSuperview()
+            make.width.equalToSuperview().multipliedBy(0.45)  // Equal width with a slight margin
+            make.height.equalTo(36)
+        }
+        
+        return containerView
+    }
+
+    // Update the method to apply accessory view
+    private func applyAccessoryViewToAllTextFields() {
+        let accessoryView = createInputAccessoryView()
+        
+        titleField.inputAccessoryView = accessoryView
+        pointsField.inputAccessoryView = accessoryView
+        targetField.inputAccessoryView = accessoryView
+        rewardField.inputAccessoryView = accessoryView
+        maxField.inputAccessoryView = accessoryView
+    }
+    // Call this in your setupEditControls() method after creating the text fields
+    // applyAccessoryViewToAllTextFields()
 }
 
 extension TaskCellEditController: UITextFieldDelegate {
