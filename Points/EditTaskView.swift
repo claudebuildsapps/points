@@ -13,9 +13,10 @@ struct EditTaskView: View {
     @State private var isRoutine: Bool
     @State private var isOptional: Bool
     @State private var activeField: FieldType? = nil
+    @Environment(\.presentationMode) var presentationMode // For sheet dismissal
     
     enum FieldType {
-        case points, target, reward, max
+        case title, points, target, reward, max
     }
 
     var onSave: ([String: Any]) -> Void
@@ -39,115 +40,151 @@ struct EditTaskView: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            // Title
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Task")
-                    .font(.system(size: 14))
-                    .foregroundColor(.gray)
-                TextField("Task", text: $title)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .padding(.horizontal, 8)
-            }
-            .padding(.horizontal, 8)
-
-            // Points and Target
-            HStack(spacing: 8) {
-                NumericField(
-                    label: "Points",
-                    text: $points,
-                    isDecimal: true,
-                    foregroundColor: .green,
-                    onActivate: { activeField = .points }
-                )
+        VStack(spacing: 0) {
+            // Title Bar
+            Text("Edit Task")
+                .font(.system(size: 20, weight: .bold))
                 .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color(.systemBackground))
+                
+            // Content area
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Title
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Task Name")
+                            .font(.system(size: 16))
+                            .foregroundColor(.gray)
+                            
+                        // Custom title field
+                        ZStack(alignment: .leading) {
+                            Rectangle()
+                                .fill(Color(.systemBlue)) // Distinctive blue background for better contrast
+                                .cornerRadius(6)
+                                .frame(height: 44)
+                            
+                            Text(title.isEmpty ? "Task name..." : title)
+                                .padding(.horizontal, 12)
+                                .foregroundColor(title.isEmpty ? .gray : .white) // Change to white for better visibility
+                        }
+                        .onTapGesture {
+                            print("Title field tapped! Activating keyboard")
+                            activeField = .title
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
 
-                NumericField(
-                    label: "Target",
-                    text: $target,
-                    isDecimal: false,
-                    foregroundColor: .blue,
-                    onActivate: { activeField = .target }
-                )
-                .frame(maxWidth: .infinity)
-            }
-            .padding(.horizontal, 8)
+                    // Points and Target
+                    HStack(spacing: 16) {
+                        NumericField(
+                            label: "Points",
+                            text: $points,
+                            isDecimal: true,
+                            foregroundColor: .green,
+                            onActivate: { activeField = .points }
+                        )
+                        .frame(maxWidth: .infinity)
 
-            // Reward and Max
-            HStack(spacing: 8) {
-                NumericField(
-                    label: "Reward",
-                    text: $reward,
-                    isDecimal: true,
-                    foregroundColor: .green,
-                    onActivate: { activeField = .reward }
-                )
-                .frame(maxWidth: .infinity)
+                        NumericField(
+                            label: "Target",
+                            text: $target,
+                            isDecimal: false,
+                            foregroundColor: .blue,
+                            onActivate: { activeField = .target }
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
+                    .padding(.horizontal, 16)
 
-                NumericField(
-                    label: "Max",
-                    text: $max,
-                    isDecimal: false,
-                    foregroundColor: .blue,
-                    onActivate: { activeField = .max }
-                )
-                .frame(maxWidth: .infinity)
-            }
-            .padding(.horizontal, 8)
+                    // Reward and Max
+                    HStack(spacing: 16) {
+                        NumericField(
+                            label: "Reward",
+                            text: $reward,
+                            isDecimal: true,
+                            foregroundColor: .green,
+                            onActivate: { activeField = .reward }
+                        )
+                        .frame(maxWidth: .infinity)
 
-            // Routine and Optional
-            HStack(spacing: 8) {
-                HStack {
-                    Text("Routine")
-                        .font(.system(size: 14))
-                        .foregroundColor(.gray)
-                    Spacer()
-                    Toggle("", isOn: $isRoutine)
-                        .labelsHidden()
-                        .tint(.green)
-                        .scaleEffect(0.75)
+                        NumericField(
+                            label: "Max",
+                            text: $max,
+                            isDecimal: false,
+                            foregroundColor: .blue,
+                            onActivate: { activeField = .max }
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
+                    .padding(.horizontal, 16)
+
+                    // Routine and Optional
+                    VStack(spacing: 16) {
+                        Toggle(isOn: $isRoutine) {
+                            Text("Routine")
+                                .font(.system(size: 16))
+                                .foregroundColor(.primary)
+                        }
+                        .toggleStyle(SwitchToggleStyle(tint: .green))
+                        
+                        Toggle(isOn: $isOptional) {
+                            Text("Optional")
+                                .font(.system(size: 16))
+                                .foregroundColor(.primary)
+                        }
+                        .toggleStyle(SwitchToggleStyle(tint: .blue))
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
                 }
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-
-                HStack {
-                    Text("Optional")
-                        .font(.system(size: 14))
-                        .foregroundColor(.gray)
-                    Spacer()
-                    Toggle("", isOn: $isOptional)
-                        .labelsHidden()
-                        .tint(.blue)
-                        .scaleEffect(0.75)
-                }
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 8)
             
-            // Add a larger divider and padding for separation
-            Rectangle()
-                .frame(height: 1)
-                .foregroundColor(Color(.systemGray5))
-                .padding(.vertical, 12)
-
-            Rectangle()
-                .frame(height: 20)
-                .foregroundColor(.clear)
-                .allowsHitTesting(false)
+            Spacer()
             
-            // Save and Cancel Buttons in separate View for isolation
-            ButtonsView(onCancel: onCancel, onSave: {
-                onSave(prepareValuesForSave())
-            }, activeField: $activeField)
-            .padding(.horizontal, 12)
-            .padding(.bottom, 12)
-            .padding(.top, 0) // Remove top padding here, we added spacer above
-            .zIndex(999) // Extremely high z-index at the container level too
-            .allowsHitTesting(true) // Explicitly allow hit testing
+            // Button bar at bottom
+            VStack(spacing: 0) {
+                Divider()
+                
+                HStack(spacing: 16) {
+                    // Cancel button
+                    Button(action: {
+                        print("Cancel button tapped")
+                        activeField = nil
+                        onCancel()
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        Text("Cancel")
+                            .font(.system(size: 17))
+                            .foregroundColor(.red)
+                            .padding(.vertical, 16)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(10)
+                    }
+                    
+                    // Save button
+                    Button(action: {
+                        print("Save button tapped")
+                        activeField = nil
+                        onSave(prepareValuesForSave())
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        Text("Save")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 16)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.green)
+                            .cornerRadius(10)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+            }
+            .background(Color(.systemBackground))
         }
-        .animation(.easeInOut(duration: 0.3), value: isExpanded)
-        .transition(.opacity)
         .fullScreenCover(item: $activeField) { field in
             KeyboardView(
                 text: binding(for: field),
@@ -167,6 +204,8 @@ struct EditTaskView: View {
     // Helper to get the binding for the active field
     func binding(for field: FieldType) -> Binding<String> {
         switch field {
+        case .title:
+            return $title
         case .points:
             return $points
         case .target:
@@ -183,7 +222,7 @@ struct EditTaskView: View {
         switch field {
         case .points, .reward:
             return true
-        case .target, .max:
+        case .title, .target, .max:
             return false
         }
     }
@@ -191,6 +230,8 @@ struct EditTaskView: View {
     // Get color for field
     func colorForField(_ field: FieldType) -> Color {
         switch field {
+        case .title:
+            return .primary
         case .points, .reward:
             return .green
         case .target, .max:
@@ -227,78 +268,7 @@ struct EditTaskView: View {
     }
 }
 
-struct ButtonsView: View {
-    var onCancel: () -> Void
-    var onSave: () -> Void
-    @Binding var activeField: EditTaskView.FieldType?
-    @State private var debugMode = true // Turn on visual debugging
-    
-    var body: some View {
-        GeometryReader { geometry in
-            HStack(spacing: 12) {
-                // Cancel "button" with debug highlight
-                ZStack {
-                    // Debug outline - bright red outline to show tappable area
-                    if debugMode {
-                        Rectangle()
-                            .stroke(Color.red, lineWidth: 2)
-                            .background(Color.red.opacity(0.3))
-                            .cornerRadius(8)
-                    } else {
-                        Rectangle()
-                            .fill(Color.red.opacity(0.1))
-                            .cornerRadius(8)
-                    }
-                    
-                    Text("Cancel")
-                        .font(.system(size: 16))
-                        .foregroundColor(.red)
-                }
-                .frame(width: (geometry.size.width - 12) / 2)
-                .contentShape(Rectangle())
-                .simultaneousGesture(TapGesture().onEnded {
-                    print("Cancel tapped via simultaneous gesture")
-                    activeField = nil
-                    onCancel()
-                })
-                
-                // Save "button" with debug highlight
-                ZStack {
-                    // Debug outline - bright green outline to show tappable area
-                    if debugMode {
-                        Rectangle()
-                            .stroke(Color.green, lineWidth: 2)
-                            .background(Color.green.opacity(0.3))
-                            .cornerRadius(8)
-                    } else {
-                        Rectangle()
-                            .fill(Color.green.opacity(0.1))
-                            .cornerRadius(8)
-                    }
-                    
-                    Text("Save")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.green)
-                }
-                .frame(width: (geometry.size.width - 12) / 2)
-                .contentShape(Rectangle())
-                .simultaneousGesture(TapGesture().onEnded {
-                    print("Save tapped via simultaneous gesture")
-                    activeField = nil
-                    onSave()
-                })
-            }
-            .frame(height: 44)
-            .zIndex(999)
-        }
-        .frame(height: 44)
-        .padding(.vertical, 16)
-        .background(
-            // Add explicit debug background to entire container
-            debugMode ? Color.yellow.opacity(0.2) : Color.clear
-        )
-    }
-}
+// ButtonsView has been removed as it's now integrated directly into EditTaskView
 
 extension EditTaskView.FieldType: Identifiable {
     var id: Self { self }

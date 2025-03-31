@@ -2,15 +2,20 @@ import SwiftUI
 
 struct ProgressBarView: View {
     // MARK: - Properties
-    @State private var progress: Float = 0.0 // State to manage progress value
+    @Binding var progress: Float
+    
+    // For backward compatibility and easy initialization
+    init(progress: Binding<Float> = .constant(0)) {
+        self._progress = progress
+    }
     
     // MARK: - Body
     var body: some View {
-        ProgressView(value: progress, total: 1.0)
+        ProgressView(value: Double(progress), total: 1.0)
             .progressViewStyle(LinearProgressViewStyle())
             .tint(progressColor)
             .background(Color.gray.opacity(0.2)) // Equivalent to trackTintColor
-            .frame(height: 6) // Make it thicker (equivalent to transform scale)
+            .frame(height: 18) // Make it 3x thicker (was 6)
             .clipShape(RoundedRectangle(cornerRadius: 0)) // No rounding
     }
     
@@ -25,15 +30,16 @@ struct ProgressBarView: View {
         }
     }
     
-    // MARK: - Methods
+    // MARK: - Methods (for backward compatibility)
     /// Updates the progress value, optionally with animation
-    func updateProgress(_ progress: Float, animated: Bool = true) {
+    func updateProgress(_ newProgress: Float, animated: Bool = true) {
+        let clampedProgress = max(0, min(newProgress, 1.0))
         if animated {
             withAnimation(.easeInOut(duration: 0.3)) {
-                self.progress = max(0, min(progress, 1.0)) // Clamp between 0 and 1
+                progress = clampedProgress
             }
         } else {
-            self.progress = max(0, min(progress, 1.0))
+            progress = clampedProgress
         }
     }
 }
@@ -41,14 +47,8 @@ struct ProgressBarView: View {
 // MARK: - Preview
 struct ProgressBarView_Previews: PreviewProvider {
     static var previews: some View {
-        ProgressBarView()
+        ProgressBarView(progress: .constant(0.7))
             .frame(width: 300, height: 20)
-            .onAppear {
-                // Simulate progress update for preview
-                let view = ProgressBarView()
-                view.updateProgress(0.7)
-                // Remove the return statement
-            }
             .previewLayout(.sizeThatFits)
             .padding()
     }

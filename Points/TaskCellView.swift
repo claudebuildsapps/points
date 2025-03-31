@@ -45,11 +45,18 @@ struct TaskCellView: View {
                                 onCancelEdit()
                             }
                         }) {
-                            // Use contentShape to explicitly define the hit area
-                            Image(systemName: "pencil")
-                                .foregroundColor(isEditMode ? .yellow : .gray)
-                                .frame(width: 30, height: 30)
-                                .contentShape(Rectangle().size(width: 45, height: 45))
+                            // Pencil icon in circle with Summary tab color (Orange)
+                            ZStack {
+                                Circle()
+                                    .fill(Color(red: 0.7, green: 0.6, blue: 0.5)) // Summary tab color
+                                    .frame(width: 32, height: 32)
+                                
+                                Image(systemName: "pencil")
+                                    .foregroundColor(.white) // White icon for contrast
+                                    .font(.system(size: 16))
+                            }
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle().size(width: 45, height: 45))
                         }
                         .buttonStyle(PlainButtonStyle())
                         .frame(width: 45)
@@ -61,36 +68,45 @@ struct TaskCellView: View {
                             // This will animate if completed value changes
                             animateCompletionChange(from: previousCompleted)
                         }) {
-                            Image(systemName: "arrow.uturn.backward")
-                                .foregroundColor(.gray)
-                                .frame(width: 30, height: 30)
-                                .contentShape(Rectangle().size(width: 45, height: 45))
+                            // Undo icon in circle with Data tab color (Red)
+                            ZStack {
+                                Circle()
+                                    .fill(Color(red: 0.8, green: 0.5, blue: 0.4)) // Data tab color
+                                    .frame(width: 32, height: 32)
+                                
+                                Image(systemName: "arrow.uturn.backward")
+                                    .foregroundColor(.white) // White icon for contrast
+                                    .font(.system(size: 14))
+                            }
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle().size(width: 45, height: 45))
                         }
                         .buttonStyle(PlainButtonStyle())
                         .frame(width: 45)
                     }
 
-                    // Points
-                    VStack(spacing: -2) {
-                        Text(String(format: "%.1f", task.points?.doubleValue ?? 0))
+                    // Points with Template tab color (blue-purple) - removed decimal and "Points" text
+                    ZStack {
+                        Circle()
+                            .fill(Color(red: 0.6, green: 0.65, blue: 0.75)) // Template tab color (Bluish-purple)
+                            .frame(width: 32, height: 32)
+                        
+                        Text("\(Int(task.points?.doubleValue ?? 0))") // Remove decimal
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.primary)
-                            .frame(width: 50)
-                        Text("Points")
-                            .font(.system(size: 11))
-                            .foregroundColor(.gray)
-                            .frame(width: 50)
+                            .foregroundColor(.white)
                     }
+                    .frame(width: 32, height: 32)
 
-                    // Title and Date
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(task.title ?? "Untitled")
-                            .font(.system(size: 16))
-                        Text(dateString())
-                            .font(.system(size: 11))
-                            .foregroundColor(.gray)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Title only with larger font (20% bigger)
+                    Text(task.title ?? "Untitled")
+                        .font(.system(size: 19)) // Increased from 16 to 19 (about 20% bigger)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .onTapGesture {
+                            // Also increment when tapping on the title
+                            let previousCompleted = Int(task.completed)
+                            onIncrement()
+                            animateCompletionChange(from: previousCompleted)
+                        }
 
                     // Completion
                     VStack(spacing: -2) {
@@ -113,33 +129,33 @@ struct TaskCellView: View {
                 .padding(.vertical, 12)
                 .padding(.horizontal, 8)
                 
-                // Edit view (when expanded)
-                if isExpanded {
+                // Replace inline edit with sheet presentation
+                .sheet(isPresented: $isExpanded) {
+                    // When sheet is dismissed without save
+                    onCancelEdit()
+                    isEditMode = false
+                } content: {
+                    // Full-screen edit view as a sheet
                     EditTaskView(
                         task: task,
                         isExpanded: $isExpanded,
                         isEditMode: $isEditMode,
                         onSave: { updatedValues in
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                onSaveEdit(updatedValues)
-                                isExpanded = false
-                                isEditMode = false
-                            }
+                            onSaveEdit(updatedValues)
+                            isExpanded = false
+                            isEditMode = false
                         },
                         onCancel: {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                onCancelEdit()
-                                isExpanded = false
-                                isEditMode = false
-                            }
+                            onCancelEdit()
+                            isExpanded = false
+                            isEditMode = false
                         }
                     )
-                    .background(Color(UIColor.systemBackground))
-                    .transition(.opacity)
+                    .padding(.top, 20)
                 }
             }
         }
-        .frame(height: isExpanded ? 300 : nil) // Adjust height for edit mode
+        // No need for expanded height since we're using a sheet
         .animation(.easeInOut(duration: 0.3), value: isExpanded) // Animate height changes
     }
 
@@ -171,10 +187,12 @@ struct TaskCellView: View {
         let completed = Int(task.completed)
         let target = Int(task.target)
         if completed >= target {
-            return Color.green.opacity(0.2)
+            return Color.green.opacity(0.3) // Increased opacity for completed tasks
         } else if completed > 0 {
+            // Progressive darker green based on completion
             let progress = CGFloat(completed) / CGFloat(target)
-            let alpha = 0.03 + (progress * 0.15)
+            // Start at 0.05 and go up to 0.25 based on progress
+            let alpha = 0.05 + (progress * 0.2)
             return Color.green.opacity(alpha)
         } else {
             return Color.clear

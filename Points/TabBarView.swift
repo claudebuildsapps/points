@@ -24,10 +24,9 @@ struct TabBarView: View {
                     handleTabSelection(index: index)
                 }) {
                     Text(fixedTabTitles[index])
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 14, weight: .medium)) // Larger font
                         .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity) // Full height and width
                         .background(tabColors[index])
                         .overlay(
                             selectedTab == index ?
@@ -47,9 +46,10 @@ struct TabBarView: View {
             }
         }
         .background(Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .edgesIgnoringSafeArea(.bottom) // Extend to bottom edge
+        .clipShape(RoundedRectangle(cornerRadius: 0)) // Remove rounded corners
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            Rectangle() // Use rectangle instead of rounded rectangle
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
         )
     }

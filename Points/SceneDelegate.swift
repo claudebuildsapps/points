@@ -6,16 +6,21 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
-        let window = UIWindow(windowScene: windowScene)
-
+        
         // Get the managed object context from the AppDelegate
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
             fatalError("Unable to access AppDelegate")
         }
         let context = appDelegate.persistentContainer.viewContext
-        let rootViewController = ViewController(context: context)
-        window.rootViewController = rootViewController
-
+        
+        // Create the SwiftUI view and set the context as the value for the environment key
+        let mainView = MainView()
+            .environment(\.managedObjectContext, context)
+        
+        // Use a UIHostingController as window root view controller
+        let window = UIWindow(windowScene: windowScene)
+        window.rootViewController = UIHostingController(rootView: mainView)
+        
         self.window = window
         window.makeKeyAndVisible()
     }

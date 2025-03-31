@@ -3,6 +3,8 @@ import SwiftUI
 struct CustomNumericKeyboard: View {
     @Binding var text: String
     var isDecimal: Bool
+    var colorScheme: ColorScheme
+    var screenWidth: CGFloat
     var onDone: () -> Void
     
     private let keyboardRows: [[String]] = [
@@ -12,50 +14,61 @@ struct CustomNumericKeyboard: View {
         [".", "0", "⌫"]
     ]
     
+    // Compute key size based on screen width
+    private var keyWidth: CGFloat {
+        (screenWidth - 50) / 3 // For 3 keys in each row, with spacing
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // Top bar with value and clear button
-            HStack {
+            ZStack {
+                // Value display
                 Text(text.isEmpty ? "0" : text)
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 26, weight: .semibold))
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 
-                Button(action: {
-                    text = ""
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(.gray)
+                // Clear button at the right
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        text = ""
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.gray)
+                    }
+                    .padding(.trailing, 16)
                 }
-                .padding(.trailing, 16)
             }
-            .background(Color(.systemGray6))
+            .frame(height: 60)
+            .background(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray5))
             
-            // Keyboard buttons
-            VStack(spacing: 10) {
+            // Keyboard buttons - edge to edge with full width
+            VStack(spacing: 6) {
                 ForEach(keyboardRows, id: \.self) { row in
-                    HStack(spacing: 10) {
+                    HStack(spacing: 6) {
                         ForEach(row, id: \.self) { key in
                             Button(action: {
                                 handleKeyPress(key)
                             }) {
                                 if key == "⌫" {
                                     Image(systemName: "delete.left")
-                                        .font(.system(size: 20))
+                                        .font(.system(size: 24))
                                         .foregroundColor(.red)
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 60)
-                                        .background(Color(.systemGray5))
-                                        .cornerRadius(10)
+                                        .background(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4))
+                                        .cornerRadius(8)
                                 } else {
                                     Text(key)
-                                        .font(.system(size: 26, weight: .medium))
+                                        .font(.system(size: 30, weight: .medium))
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 60)
-                                        .background(Color(.systemGray5))
+                                        .background(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4))
                                         .foregroundColor(.primary)
-                                        .cornerRadius(10)
+                                        .cornerRadius(8)
                                 }
                             }
                             .disabled(key == "." && (!isDecimal || text.contains(".")))
@@ -63,21 +76,37 @@ struct CustomNumericKeyboard: View {
                     }
                 }
                 
-                // Done button
-                Button(action: onDone) {
-                    Text("Done")
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 60)
-                        .background(Color.blue)
-                        .cornerRadius(10)
+                // Function row with Cancel/Done buttons - full width
+                HStack(spacing: 6) {
+                    // Cancel button
+                    Button(action: {
+                        text = ""  // Clear the text and then dismiss
+                        onDone()
+                    }) {
+                        Text("Cancel")
+                            .font(.system(size: 20))
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 60)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                    }
+                    
+                    // Done button
+                    Button(action: onDone) {
+                        Text("Done")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 60)
+                            .background(Color.blue)
+                            .cornerRadius(8)
+                    }
                 }
-                .padding(.top, 10)
             }
-            .padding(15)
+            .padding(5)
+            .background(colorScheme == .dark ? Color.black : Color(.systemGray6))
         }
-        .background(Color(.systemBackground))
     }
     
     private func handleKeyPress(_ key: String) {
@@ -112,6 +141,8 @@ struct CustomNumericKeyboard: View {
         CustomNumericKeyboard(
             text: .constant("123.45"),
             isDecimal: true,
+            colorScheme: .light,
+            screenWidth: UIScreen.main.bounds.width,
             onDone: {}
         )
     }
