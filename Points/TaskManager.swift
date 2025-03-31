@@ -59,6 +59,7 @@ class TaskManager {
                     dateObject = CoreDataDate(context: context)
                     dateObject.date = today
                     dateObject.target = 5
+                    dateObject.points = NSDecimalNumber(value: 0.0) // Initialize with zero points
                 }
                 
                 // Now create tasks linked to this date object
@@ -102,11 +103,33 @@ class TaskManager {
         task.position = Int16(fetchTasks().count) // Set position based on current count
         task.routine = false
         
-        // Set the date (e.g., current date)
-        let date = CoreDataDate(context: context)
-        date.date = Date()
-        date.target = target
-        task.date = date
+        // Find or create a date entity for today
+        let today = Calendar.current.startOfDay(for: Date())
+        let fetchRequest: NSFetchRequest<CoreDataDate> = CoreDataDate.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "date == %@", today as NSDate)
+        
+        do {
+            let results = try context.fetch(fetchRequest)
+            if let existingDate = results.first {
+                // Use existing date entity
+                task.date = existingDate
+            } else {
+                // Create a new date entity
+                let date = CoreDataDate(context: context)
+                date.date = today
+                date.target = target
+                date.points = NSDecimalNumber(value: 0.0) // Initialize with zero points
+                task.date = date
+            }
+        } catch {
+            print("Error fetching date for template task: \(error)")
+            // Create a fallback date entity
+            let date = CoreDataDate(context: context)
+            date.date = today
+            date.target = target
+            date.points = NSDecimalNumber(value: 0.0)
+            task.date = date
+        }
         
         saveContext()
         return task

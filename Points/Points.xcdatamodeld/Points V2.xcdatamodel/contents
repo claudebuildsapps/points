@@ -2,6 +2,7 @@
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="23605" systemVersion="24D70" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
     <entity name="CoreDataDate" representedClassName="CoreDataDate" syncable="YES" codeGenerationType="class">
         <attribute name="date" attributeType="Date" defaultDateTimeInterval="757549080" usesScalarValueType="NO"/>
+        <attribute name="points" attributeType="Decimal" defaultValueString="0.0" usesScalarValueType="NO"/>
         <attribute name="target" attributeType="Integer 16" defaultValueString="100" usesScalarValueType="YES"/>
         <relationship name="completions" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CoreDataTaskCompletion" inverseName="date" inverseEntity="CoreDataTaskCompletion"/>
         <relationship name="tasks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CoreDataTask" inverseName="date" inverseEntity="CoreDataTask"/>

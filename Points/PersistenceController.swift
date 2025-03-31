@@ -10,6 +10,7 @@ struct PersistenceController {
         let sampleDate = CoreDataDate(context: viewContext)
         sampleDate.date = Calendar.current.startOfDay(for: Date())
         sampleDate.target = 5
+        sampleDate.points = NSDecimalNumber(value: 0.0)
         
         let sampleTask = CoreDataTask(context: viewContext)
         sampleTask.title = "Sample Task"

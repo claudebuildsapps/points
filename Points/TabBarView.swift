@@ -6,8 +6,8 @@ struct TabBarView: View {
     private let tabCount: Int = 5
     private let fixedTabTitles = ["Routines", "Tasks", "Template", "Summary", "Data"]
     private let tabColors: [Color] = [
-        Color(red: 0.4, green: 0.6, blue: 0.8),  // Blue
-        Color(red: 0.5, green: 0.7, blue: 0.6),  // Green
+        Color(red: 0.5, green: 0.7, blue: 0.6),  // Green (swapped with Tasks)
+        Color(red: 0.4, green: 0.6, blue: 0.8),  // Blue (swapped with Routines)
         Color(red: 0.6, green: 0.65, blue: 0.75), // Bluish-purple
         Color(red: 0.7, green: 0.6, blue: 0.5),  // Orange
         Color(red: 0.8, green: 0.5, blue: 0.4)   // Red
