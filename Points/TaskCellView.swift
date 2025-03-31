@@ -8,7 +8,7 @@ struct TaskCellView: View {
     @State private var isEditMode = false
     @State private var flashBackground = false
 
-    // Delegate-like callbacks
+    // Callback closures
     var onDecrement: () -> Void
     var onDelete: () -> Void
     var onDuplicate: () -> Void
@@ -17,18 +17,13 @@ struct TaskCellView: View {
     var onIncrement: () -> Void
 
     var body: some View {
-        // Main container for the cell
         Button(action: {
-            // Store previous value for animation
             let previousCompleted = Int(task.completed)
-            // Increment the completion count via callback
             onIncrement()
-            // Animate the change
             animateCompletionChange(from: previousCompleted)
         }) {
-            // Content container with background
             ZStack {
-                // Background color with animation
+                // Background with completion state color
                 backgroundColor()
                     .animation(.easeInOut(duration: Constants.Animation.standard), value: task.completed)
                 
@@ -38,145 +33,67 @@ struct TaskCellView: View {
                         .allowsHitTesting(false)
                 }
                 
-                // Content layer
-                VStack(spacing: 0) {
-                    // Display mode
-                    HStack(spacing: 8) {
-                        // Action buttons in a row
-                        HStack(spacing: 5) {
-                            // Points
-                            ZStack {
-                                Circle()
-                                    .fill(Constants.Colors.templateTab)
-                                    .frame(width: 32, height: 32)
-                                
-                                Text("\(Int(task.points?.doubleValue ?? 0))")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white)
-                            }
-                            .frame(width: 32, height: 32)
-                            .contentShape(Rectangle().size(width: 45, height: 45))
+                // Content row
+                HStack(spacing: 8) {
+                    // Action buttons
+                    HStack(spacing: 5) {
+                        // Points indicator
+                        Text("\(Int(task.points?.doubleValue ?? 0))")
+                            .circleButton(color: Constants.Colors.templateTab)
                             .frame(width: 45)
-                            
-                            // Edit button
-                            Button(action: {
-                                // Stop propagation to parent
-                                withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
-                                    isEditMode.toggle()
-                                    isExpanded = isEditMode
-                                }
-                                if !isEditMode {
-                                    onCancelEdit()
-                                }
-                            }) {
-                                // Pencil icon
-                                ZStack {
-                                    Circle()
-                                        .fill(Constants.Colors.summaryTab)
-                                        .frame(width: 32, height: 32)
-                                    
-                                    Image(systemName: "pencil")
-                                        .foregroundColor(.white)
-                                        .font(.system(size: 16))
-                                }
-                                .frame(width: 32, height: 32)
-                                .contentShape(Rectangle().size(width: 45, height: 45))
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .frame(width: 45)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                // Ensure tap doesn't propagate to parent
-                                withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
-                                    isEditMode.toggle()
-                                    isExpanded = isEditMode
-                                }
-                                if !isEditMode {
-                                    onCancelEdit()
-                                }
-                            }
-
-                            // Undo button
-                            Button(action: {
-                                // Only decrement if completed > 0 and stop propagation
-                                if Int(task.completed) > 0 {
-                                    let previousCompleted = Int(task.completed)
-                                    onDecrement()
-                                    // This will animate if completed value changes
-                                    animateCompletionChange(from: previousCompleted)
-                                }
-                            }) {
-                                // Undo icon
-                                ZStack {
-                                    Circle()
-                                        .fill(Constants.Colors.dataTab)
-                                        .frame(width: 32, height: 32)
-                                    
-                                    Image(systemName: "arrow.uturn.backward")
-                                        .foregroundColor(.white)
-                                        .font(.system(size: 14))
-                                }
-                                .frame(width: 32, height: 32)
-                                .contentShape(Rectangle().size(width: 45, height: 45))
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .frame(width: 45)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                // Ensure tap doesn't propagate to parent and only decrement if completed > 0
-                                if Int(task.completed) > 0 {
-                                    let previousCompleted = Int(task.completed)
-                                    onDecrement()
-                                    // This will animate if completed value changes
-                                    animateCompletionChange(from: previousCompleted)
-                                }
-                            }
-                            .disabled(Int(task.completed) <= 0)
-                            .opacity(Int(task.completed) > 0 ? 1.0 : 0.5)
+                        
+                        // Edit button
+                        Button(action: toggleEditMode) {
+                            Image(systemName: "pencil")
+                                .circleButton(color: Constants.Colors.summaryTab)
                         }
+                        .buttonStyle(PlainButtonStyle())
+                        .frame(width: 45)
+                        .contentShape(Rectangle())
+                        .onTapGesture(perform: toggleEditMode)
 
-                        // Title and date info for debugging
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(task.title ?? "Untitled")
-                                .font(.system(size: 19, weight: .medium))
-                                .foregroundColor(Color.gray.opacity(0.8))
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                            
-                            // Debug text showing the date
-                            Text(dateString())
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
+                        // Undo button
+                        Button(action: handleDecrement) {
+                            Image(systemName: "arrow.uturn.backward")
+                                .circleButton(color: Constants.Colors.dataTab)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        // Completion counter
-                        ZStack {
-                            Circle()
-                                .fill(Constants.Colors.tasksTab)
-                                .frame(width: 32, height: 32)
-                            
-                            Text("\(Int(task.completed))/\(Int(task.target))")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                        .frame(width: 32, height: 32)
+                        .buttonStyle(PlainButtonStyle())
+                        .frame(width: 45)
+                        .contentShape(Rectangle())
+                        .onTapGesture(perform: handleDecrement)
+                        .disabled(Int(task.completed) <= 0)
+                        .opacity(Int(task.completed) > 0 ? 1.0 : 0.5)
                     }
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 8)
+
+                    // Task title and date
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(task.title ?? "Untitled")
+                            .font(.system(size: 19, weight: .medium))
+                            .foregroundColor(Color.gray.opacity(0.8))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        
+                        Text(DateHelper.formatDate(task.date?.date))
+                            .captionText()
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    // Completion counter
+                    Text("\(Int(task.completed))/\(Int(task.target))")
+                        .circleButton(color: Constants.Colors.tasksTab)
                 }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 8)
             }
         }
         .buttonStyle(PlainButtonStyle())
         
-        // Edit view presentation
-        .sheet(isPresented: $isExpanded) {
-            // When sheet is dismissed without save
+        // Present edit sheet when edit mode is active
+        .sheet(isPresented: $isExpanded, onDismiss: {
             onCancelEdit()
             isEditMode = false
-        } content: {
-            // Full-screen edit view as a sheet
+        }) {
             EditTaskView(
                 task: task,
                 isExpanded: $isExpanded,
@@ -194,9 +111,30 @@ struct TaskCellView: View {
             )
             .padding(.top, 20)
         }
-        .animation(.easeInOut(duration: Constants.Animation.standard), value: isExpanded)
+        .standardAnimation()
     }
 
+    // Toggle edit mode
+    private func toggleEditMode() {
+        withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
+            isEditMode.toggle()
+            isExpanded = isEditMode
+        }
+        if !isEditMode {
+            onCancelEdit()
+        }
+    }
+    
+    // Handle decrement button tap
+    private func handleDecrement() {
+        if Int(task.completed) > 0 {
+            let previousCompleted = Int(task.completed)
+            onDecrement()
+            animateCompletionChange(from: previousCompleted)
+        }
+    }
+
+    // Animate task completion
     private func animateCompletionChange(from previousCompleted: Int) {
         let currentCompleted = Int(task.completed)
         
@@ -213,37 +151,25 @@ struct TaskCellView: View {
         }
     }
     
-    private func dateString() -> String {
-        return DateHelper.formatDate(task.date?.date)
-    }
-
+    // Calculate background color based on completion
     private func backgroundColor() -> Color {
         let completed = Int(task.completed)
         let target = Int(task.target)
         
         if completed >= target {
-            // Fully completed task
             return Color.green.opacity(0.3)
         } else if completed > 0 {
-            // Progressive darker green based on completion percentage
             let progress = CGFloat(completed) / CGFloat(target)
             let alpha = 0.05 + (progress * 0.2)
             return Color.green.opacity(alpha)
         } else {
-            // No progress yet
             return Color.clear
         }
-    }
-
-    private func completionColor() -> Color {
-        let completed = Int(task.completed)
-        let target = Int(task.target)
-        return completed >= target ? .green : Constants.Colors.tasksTab
     }
 }
 
 extension TaskCellView {
-    // Toggle edit mode
+    // Public method to set edit mode from parent
     func toggleEditMode(isOn: Bool) {
         withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
             isEditMode = isOn

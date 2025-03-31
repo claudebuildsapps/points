@@ -1,15 +1,12 @@
 import SwiftUI
 
 struct ProgressBarView: View {
-    // MARK: - Properties
     @Binding var progress: Float
     
-    // For backward compatibility and easy initialization
     init(progress: Binding<Float> = .constant(0)) {
         self._progress = progress
     }
     
-    // MARK: - Body
     var body: some View {
         ProgressView(value: Double(progress), total: 1.0)
             .progressViewStyle(LinearProgressViewStyle())
@@ -19,19 +16,19 @@ struct ProgressBarView: View {
             .clipShape(RoundedRectangle(cornerRadius: 0))
     }
     
-    // MARK: - Computed Properties
+    // Color changes based on progress level
     private var progressColor: Color {
-        if progress < 0.5 {
+        switch progress {
+        case ..<0.5:
             return .yellow
-        } else if progress < 0.8 {
+        case 0.5..<0.8:
             return Color(red: 0.5, green: 0.8, blue: 0.2) // Yellow-green
-        } else {
+        default:
             return .green
         }
     }
     
-    // MARK: - Methods
-    /// Updates the progress value, optionally with animation
+    // Update progress with optional animation
     func updateProgress(_ newProgress: Float, animated: Bool = true) {
         let clampedProgress = max(0, min(newProgress, 1.0))
         if animated {
@@ -44,7 +41,6 @@ struct ProgressBarView: View {
     }
 }
 
-// MARK: - Preview
 struct ProgressBarView_Previews: PreviewProvider {
     static var previews: some View {
         ProgressBarView(progress: .constant(0.7))

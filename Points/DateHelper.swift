@@ -3,7 +3,6 @@ import Foundation
 import CoreData
 
 class DateHelper {
-    
     private let context: NSManagedObjectContext
     
     init(context: NSManagedObjectContext) {
@@ -12,9 +11,8 @@ class DateHelper {
     
     // Create or fetch a date entity for a specific date
     func getDateEntity(for date: Date) -> CoreDataDate? {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: date)
-        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        let startOfDay = date.startOfDay
+        let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay)!
         
         let fetchRequest: NSFetchRequest<CoreDataDate> = CoreDataDate.fetchRequest()
         fetchRequest.predicate = NSPredicate(format: "date >= %@ AND date < %@", startOfDay as NSDate, endOfDay as NSDate)
@@ -25,16 +23,26 @@ class DateHelper {
             if let existingDate = results.first {
                 return existingDate
             } else {
-                // Create a new date entity
-                let newDate = CoreDataDate(context: context)
-                newDate.date = startOfDay
-                newDate.target = Int16(Constants.Defaults.targetPoints)
-                newDate.points = NSDecimalNumber(value: 0.0)
-                try context.save()
-                return newDate
+                return createNewDateEntity(for: startOfDay)
             }
         } catch {
-            print("Error fetching or creating date entity: \(error)")
+            print("Error fetching date entity: \(error)")
+            return nil
+        }
+    }
+    
+    // Create a new date entity
+    private func createNewDateEntity(for date: Date) -> CoreDataDate? {
+        let newDate = CoreDataDate(context: context)
+        newDate.date = date
+        newDate.target = Int16(Constants.Defaults.targetPoints)
+        newDate.points = NSDecimalNumber(value: 0.0)
+        
+        do {
+            try context.save()
+            return newDate
+        } catch {
+            print("Error creating new date entity: \(error)")
             return nil
         }
     }
@@ -47,10 +55,7 @@ class DateHelper {
     // Format date for display
     static func formatDate(_ date: Date?, style: DateFormatter.Style = .medium) -> String {
         guard let date = date else { return "Unknown Date" }
-        let formatter = DateFormatter()
-        formatter.dateStyle = style
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
+        return date.formatted(style: style)
     }
     
     // Check for tasks on a given date and create defaults if none exist
@@ -60,7 +65,6 @@ class DateHelper {
         
         do {
             let taskCount = try context.count(for: taskCheck)
-            
             if taskCount == 0 {
                 createDefaultTasks(for: dateEntity)
             }
@@ -91,20 +95,6 @@ class DateHelper {
         task2.position = 1
         task2.max = Int16(Constants.Defaults.taskMax)
         
-        do {
-            try context.save()
-        } catch {
-            print("Error creating default tasks: \(error)")
-        }
-    }
-    
-    // Get a specific date by day offset from current date
-    func getDate(dayOffset: Int) -> Date {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        if let newDate = calendar.date(byAdding: .day, value: dayOffset, to: today) {
-            return newDate
-        }
-        return today
+        try? context.save()
     }
 }
