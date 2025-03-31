@@ -1,23 +1,24 @@
 import SwiftUI
 
-// Define a struct for the FooterDisplayView in SwiftUI
+// Define a class to observe points updates
 class PointsObserver: ObservableObject {
     @Published var points: Int = 0
     
     init() {
         // Setup notification observer
-        NotificationCenter.default.addObserver(self, selector: #selector(updatePoints), name: NSNotification.Name("UpdatePointsDisplay"), object: nil)
-        print("PointsObserver: Initialized and observing for point updates")
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(updatePoints),
+            name: Constants.Notifications.updatePointsDisplay,
+            object: nil
+        )
     }
     
     @objc func updatePoints(notification: Notification) {
         if let userInfo = notification.userInfo, let points = userInfo["points"] as? Int {
             DispatchQueue.main.async {
-                print("PointsObserver: Received update, setting points to \(points)")
                 self.points = points
             }
-        } else {
-            print("PointsObserver: Received notification but couldn't extract points value")
         }
     }
     
@@ -29,35 +30,27 @@ class PointsObserver: ObservableObject {
 struct FooterDisplayView: View {
     // MARK: - Properties
     @ObservedObject var pointsObserver = PointsObserver()
-    @State private var isAnimating: Bool = false // State to manage animation
+    @State private var isAnimating: Bool = false
     
-    // Closures to handle button actions (replacing the delegate pattern)
+    // Closures to handle button actions
     let onAddButtonTapped: () -> Void
     let onClearButtonTapped: () -> Void
     let onSoftResetButtonTapped: () -> Void
     let onCreateNewTaskInEditMode: () -> Void
     
-    // Computed property to get points from observer
-    private var points: Int {
-        return pointsObserver.points
-    }
-    
     // MARK: - Body
     var body: some View {
-        // Horizontal layout precisely aligned with tabs
+        // Horizontal layout aligned with tabs
         HStack(spacing: 0) {
-            // First tab (Routines) with blue plus button
+            // Routines tab with green plus button
             HStack {
                 Spacer()
                 
-                // Add Routine Button with Routines tab color (now green)
-                Button(action: {
-                    // Add a routine task (you may want to handle this differently)
-                    onAddButtonTapped()
-                }) {
+                // Add Routine Button
+                Button(action: onAddButtonTapped) {
                     ZStack {
                         Circle()
-                            .fill(Color(red: 0.5, green: 0.7, blue: 0.6)) // Routines tab color (Green)
+                            .fill(Constants.Colors.routinesTab)
                             .frame(width: 32, height: 32)
                             
                         Image(systemName: "plus")
@@ -70,17 +63,15 @@ struct FooterDisplayView: View {
             }
             .frame(width: UIScreen.main.bounds.width/5)
             
-            // Second tab (Tasks) with blue plus button
+            // Tasks tab with blue plus button
             HStack {
                 Spacer()
                 
-                // Add Task Button with Task tab color (now blue)
-                Button(action: {
-                    onAddButtonTapped()
-                }) {
+                // Add Task Button
+                Button(action: onAddButtonTapped) {
                     ZStack {
                         Circle()
-                            .fill(Color(red: 0.4, green: 0.6, blue: 0.8)) // Tasks tab color (Blue)
+                            .fill(Constants.Colors.tasksTab)
                             .frame(width: 32, height: 32)
                             
                         Image(systemName: "plus")
@@ -93,17 +84,17 @@ struct FooterDisplayView: View {
             }
             .frame(width: UIScreen.main.bounds.width/5)
             
-            // Third tab (Template) with Points circle
+            // Template tab with Points circle
             HStack {
                 Spacer()
                 
-                // Points circle with Template tab color
+                // Points circle
                 ZStack {
                     Circle()
-                        .fill(Color(red: 0.6, green: 0.65, blue: 0.75)) // Template tab color (Bluish-purple)
+                        .fill(Constants.Colors.templateTab)
                         .frame(width: 32, height: 32)
                     
-                    Text("\(Int(points))")  // Display without decimal places
+                    Text("\(pointsObserver.points)")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
                 }
@@ -112,17 +103,15 @@ struct FooterDisplayView: View {
             }
             .frame(width: UIScreen.main.bounds.width/5)
             
-            // Fourth tab (Summary) with help button (?)
+            // Summary tab with help button
             HStack {
                 Spacer()
                 
-                // Help button with Summary tab color (orange)
-                Button(action: {
-                    // Help action
-                }) {
+                // Help button
+                Button(action: {}) {
                     ZStack {
                         Circle()
-                            .fill(Color(red: 0.7, green: 0.6, blue: 0.5))  // Summary tab color (Orange)
+                            .fill(Constants.Colors.summaryTab)
                             .frame(width: 32, height: 32)
                             
                         Text("?")
@@ -135,20 +124,18 @@ struct FooterDisplayView: View {
             }
             .frame(width: UIScreen.main.bounds.width/5)
             
-            // Fifth tab (Data) with database icon
+            // Data tab with database icon
             HStack {
                 Spacer()
                 
-                // Database button with Data tab color (red)
-                Button(action: {
-                    // Database action
-                }) {
+                // Database button
+                Button(action: {}) {
                     ZStack {
                         Circle()
-                            .fill(Color(red: 0.8, green: 0.5, blue: 0.4))  // Data tab color (Red)
+                            .fill(Constants.Colors.dataTab)
                             .frame(width: 32, height: 32)
                             
-                        Image(systemName: "cylinder.split.1x2")  // Database icon
+                        Image(systemName: "cylinder.split.1x2")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
                     }
@@ -158,12 +145,13 @@ struct FooterDisplayView: View {
             }
             .frame(width: UIScreen.main.bounds.width/5)
         }
-        .padding(.bottom, 0.5) // Extremely close to the tabs
+        .padding(.bottom, 0.5)
         .background(Color.clear)
-        .frame(height: 44) // Just enough height for the buttons
+        .frame(height: 44)
     }
     
     // MARK: - Methods
+    
     /// Updates the points value, optionally with animation
     func updatePoints(_ newPoints: Int, animated: Bool = true) {
         if animated {
@@ -173,7 +161,7 @@ struct FooterDisplayView: View {
         }
     }
     
-    /// Animates the points change from the current value to the new value
+    /// Animates the points change
     private func animatePointChange(to newPoints: Int) {
         guard !isAnimating else { return }
         isAnimating = true
@@ -184,7 +172,7 @@ struct FooterDisplayView: View {
         let totalFrames = Int(duration * frameRate)
         var currentFrame = 0
         
-        // Store in a local variable to avoid capturing self in timer
+        // Store in a local variable to avoid capturing self
         let observer = pointsObserver
         
         Timer.scheduledTimer(withTimeInterval: 1.0 / frameRate, repeats: true) { timer in
@@ -204,12 +192,7 @@ struct FooterDisplayView: View {
         }
     }
     
-    /// Returns the current points value
-    func getCurrentPoints() -> Int {
-        return pointsObserver.points
-    }
-    
-    /// Resets the UI (replaces fullReloadUI)
+    /// Reset the UI
     func resetUI() {
         updatePoints(0, animated: false)
     }

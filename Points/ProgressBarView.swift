@@ -14,9 +14,9 @@ struct ProgressBarView: View {
         ProgressView(value: Double(progress), total: 1.0)
             .progressViewStyle(LinearProgressViewStyle())
             .tint(progressColor)
-            .background(Color.gray.opacity(0.2)) // Equivalent to trackTintColor
-            .frame(height: 18) // Make it 3x thicker (was 6)
-            .clipShape(RoundedRectangle(cornerRadius: 0)) // No rounding
+            .background(Color.gray.opacity(0.2))
+            .frame(height: 18)
+            .clipShape(RoundedRectangle(cornerRadius: 0))
     }
     
     // MARK: - Computed Properties
@@ -30,12 +30,12 @@ struct ProgressBarView: View {
         }
     }
     
-    // MARK: - Methods (for backward compatibility)
+    // MARK: - Methods
     /// Updates the progress value, optionally with animation
     func updateProgress(_ newProgress: Float, animated: Bool = true) {
         let clampedProgress = max(0, min(newProgress, 1.0))
         if animated {
-            withAnimation(.easeInOut(duration: 0.3)) {
+            withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
                 progress = clampedProgress
             }
         } else {
@@ -53,4 +53,3 @@ struct ProgressBarView_Previews: PreviewProvider {
             .padding()
     }
 }
-

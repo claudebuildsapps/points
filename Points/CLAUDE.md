@@ -24,11 +24,10 @@
 - More to come
 
 ## Tasks
-- Continue porting all UIKit code to SwiftUI
-- More to come after we finish the port
+- Nothing here yet
 
 ## Notes
-- Once te port from UIKit to SwiftUI is complete, we can work on cleaning up the interface to resemble what it was before the port
+- Nothing here yet
 
 ## Critical instructions
 - Do not make any attempts to create files that already exist in the codebase

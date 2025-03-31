@@ -2,18 +2,18 @@ import SwiftUI
 
 struct TabBarView: View {
     // MARK: - Properties
-    @State private var selectedTab: Int = 0 // State to track the selected tab
+    @State private var selectedTab: Int = 0
     private let tabCount: Int = 5
     private let fixedTabTitles = ["Routines", "Tasks", "Template", "Summary", "Data"]
     private let tabColors: [Color] = [
-        Color(red: 0.5, green: 0.7, blue: 0.6),  // Green (swapped with Tasks)
-        Color(red: 0.4, green: 0.6, blue: 0.8),  // Blue (swapped with Routines)
-        Color(red: 0.6, green: 0.65, blue: 0.75), // Bluish-purple
-        Color(red: 0.7, green: 0.6, blue: 0.5),  // Orange
-        Color(red: 0.8, green: 0.5, blue: 0.4)   // Red
+        Constants.Colors.routinesTab,
+        Constants.Colors.tasksTab,
+        Constants.Colors.templateTab,
+        Constants.Colors.summaryTab,
+        Constants.Colors.dataTab
     ]
     
-    // Closure to handle tab selection (replacing delegate)
+    // Closure to handle tab selection
     let onTabSelected: (Int) -> Void
     
     // MARK: - Body
@@ -24,9 +24,9 @@ struct TabBarView: View {
                     handleTabSelection(index: index)
                 }) {
                     Text(fixedTabTitles[index])
-                        .font(.system(size: 14, weight: .medium)) // Larger font
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.white)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity) // Full height and width
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(tabColors[index])
                         .overlay(
                             selectedTab == index ?
@@ -46,26 +46,16 @@ struct TabBarView: View {
             }
         }
         .background(Color.clear)
-        .edgesIgnoringSafeArea(.bottom) // Extend to bottom edge
-        .clipShape(RoundedRectangle(cornerRadius: 0)) // Remove rounded corners
+        .edgesIgnoringSafeArea(.bottom)
+        .clipShape(RoundedRectangle(cornerRadius: 0))
         .overlay(
-            Rectangle() // Use rectangle instead of rounded rectangle
+            Rectangle()
                 .stroke(Color.gray.opacity(0.5), lineWidth: 1)
         )
     }
     
     // MARK: - Methods
     private func handleTabSelection(index: Int) {
-        // Special handling for the "Data" tab (index 4)
-        if index == 4 {
-            // In SwiftUI, we can't directly access the view controller
-            // This action will need to be handled by the parent view
-            // We'll call the callback and let the parent handle it
-            onTabSelected(index)
-            return
-        }
-        
-        // For other tabs, update the selected tab and notify the parent
         selectedTab = index
         onTabSelected(index)
     }

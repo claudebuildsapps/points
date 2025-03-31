@@ -1,6 +1,6 @@
 // GamificationEngine.swift
 import Foundation
-import CoreData // Add this if CoreDataTask is a Core Data entity
+import CoreData
 
 class GamificationEngine {
     // MARK: - Constants
@@ -15,22 +15,17 @@ class GamificationEngine {
     ///   - task: The task to calculate bonuses for
     ///   - consecutiveDays: Number of consecutive days tasks have been completed
     /// - Returns: The bonus multiplier (e.g., 0.2 for 20%)
-    func setConsecutiveBonuses(for task: CoreDataTask, consecutiveDays: Int) -> Decimal {
+    func calculateBonuses(for task: CoreDataTask, consecutiveDays: Int) -> Decimal {
         // Skip bonus calculations for optional or inactive tasks
-        // Note: Adjust this logic based on your CoreDataTask properties
-        guard task.routine else { // Assuming routine tasks are the active ones
+        guard task.routine else { 
             return 0
         }
         
         var bonus: Decimal = 0
         
-        // Apply consecutive day bonus (capped at maxConsecutiveDayBonus)
+        // Apply consecutive day bonus 
         if consecutiveDays > 1 {
-            let consecutiveBonus = min(
-                Decimal(consecutiveDays - 1) * consecutiveDayMultiplier,
-                maxConsecutiveDayBonus
-            )
-            bonus += consecutiveBonus
+            bonus += calculateStreakBonus(consecutiveDays: consecutiveDays)
         }
         
         // For routine tasks, apply additional bonuses
@@ -45,7 +40,7 @@ class GamificationEngine {
                 let extraCompleted = Int(task.completed) - Int(task.target)
                 let maxExtra = Int(task.max) - Int(task.target)
                 let extraRatio = Decimal(extraCompleted) / Decimal(maxExtra)
-                let scaledBonus = extraRatio * 0.1 // Assuming a default scalar of 0.1 if not defined
+                let scaledBonus = extraRatio * 0.1
                 bonus += scaledBonus
             }
         }
@@ -62,14 +57,13 @@ class GamificationEngine {
         // Base points
         var points = Decimal(task.points?.doubleValue ?? 0)
         
-        // Apply bonus if there is one (1 + 0.2 = 1.2x multiplier for 20% bonus)
+        // Apply bonus if there is one
         if bonus > 0 {
             points *= (1 + bonus)
         }
         
-        // For routine tasks, scale points based on completion
         if task.routine {
-            // If task is completed at least to target
+            // Routine tasks get scaled based on completion
             if task.completed >= task.target {
                 // Calculate completion ratio (capped at max)
                 let completionRatio = min(
@@ -88,8 +82,10 @@ class GamificationEngine {
             }
         }
         
-        // Add any fixed reward points (assuming 0 if not defined)
-        points += 0 // Adjust if you have a reward property in CoreDataTask
+        // Add any fixed reward points
+        if let reward = task.reward?.decimalValue {
+            points += reward
+        }
         
         return points
     }
@@ -108,7 +104,24 @@ class GamificationEngine {
         )
     }
     
+    /// Calculate progress toward goal
+    /// - Parameters:
+    ///   - totalPoints: Current points earned
+    ///   - goal: Target points
+    /// - Returns: Progress as a Float between 0 and 1
     func calculateProgress(totalPoints: Int, goal: Int) -> Float {
-        min(Float(totalPoints) / Float(goal), 1.0)
+        guard goal > 0 else { return 0 }
+        return min(Float(totalPoints) / Float(goal), 1.0)
+    }
+    
+    /// Calculate total points for a collection of tasks
+    /// - Parameter tasks: Array of tasks to calculate points for
+    /// - Returns: Total points as an integer
+    func calculateTotalPoints(for tasks: [CoreDataTask]) -> Int {
+        let total = tasks.reduce(0) { total, task in
+            let basePoints = Int(task.completed) * Int(truncating: task.points ?? 0)
+            return total + basePoints
+        }
+        return total
     }
 }
