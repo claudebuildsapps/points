@@ -82,7 +82,7 @@ class TaskManager {
             }
         }
     }
-    
+
     func saveContext() {
         do {
             try context.save()

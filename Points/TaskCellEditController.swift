@@ -18,8 +18,6 @@ class TaskCellEditController: NSObject {
     private var maxField: UITextField!
     private var routineSwitch: UISwitch!
     private var optionalSwitch: UISwitch!
-    private var saveButton: UIButton!
-    private var cancelButton: UIButton!
     
     // MARK: - Initialization
     init(cell: TaskTableViewCell, delegate: TaskTableViewCellDelegate?) {
@@ -65,7 +63,6 @@ class TaskCellEditController: NSObject {
         )
     }
 
-
     private func setupEditControls() {
         // Create UI elements
         let titleContainer = TaskCellUIFactory.createFieldContainer()
@@ -103,14 +100,6 @@ class TaskCellEditController: NSObject {
         optionalSwitch.onTintColor = .systemBlue
         optionalSwitch.transform = CGAffineTransform(scaleX: 0.75, y: 0.75)
         
-        // Create buttons
-        saveButton = TaskCellUIFactory.createButton(title: "Save", isPrimary: true)
-        cancelButton = TaskCellUIFactory.createButton(title: "Cancel")
-        
-        // Add action handlers
-        saveButton.addTarget(self, action: #selector(saveButtonTapped), for: .touchUpInside)
-        cancelButton.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
-        
         // Add all elements to the view hierarchy
         editContainer.addSubview(titleContainer)
         titleContainer.addSubview(titleLabel)
@@ -139,9 +128,6 @@ class TaskCellEditController: NSObject {
         editContainer.addSubview(optionalContainer)
         optionalContainer.addSubview(optionalLabel)
         optionalContainer.addSubview(optionalSwitch)
-        
-        editContainer.addSubview(saveButton)
-        editContainer.addSubview(cancelButton)
         
         // Use SnapKit for all layout constraints
         
@@ -201,33 +187,18 @@ class TaskCellEditController: NSObject {
             make.top.equalTo(rewardContainer.snp.bottom).offset(8)
             make.left.equalToSuperview().offset(8)
             make.width.equalToSuperview().multipliedBy(0.47)
-            make.height.equalTo(45)
+            make.height.equalTo(36) // Reduced height since label and switch are on same line
+            make.bottom.lessThanOrEqualToSuperview().offset(-12)
         }
         
         optionalContainer.snp.makeConstraints { make in
             make.top.equalTo(maxContainer.snp.bottom).offset(8)
             make.right.equalToSuperview().offset(-8)
             make.width.equalToSuperview().multipliedBy(0.47)
-            make.height.equalTo(45)
-        }
-        
-        // Buttons row
-        cancelButton.snp.makeConstraints { make in
-            make.top.equalTo(routineContainer.snp.bottom).offset(12)
-            make.left.equalToSuperview().offset(8)
-            make.width.equalToSuperview().multipliedBy(0.47)
-            make.height.equalTo(40)
+            make.height.equalTo(36) // Reduced height since label and switch are on same line
             make.bottom.lessThanOrEqualToSuperview().offset(-12)
         }
-        
-        saveButton.snp.makeConstraints { make in
-            make.top.equalTo(optionalContainer.snp.bottom).offset(12)
-            make.right.equalToSuperview().offset(-8)
-            make.width.equalToSuperview().multipliedBy(0.47)
-            make.height.equalTo(40)
-            make.bottom.lessThanOrEqualToSuperview().offset(-12)
-        }
-        
+
         // Interior layout for each field container
         // Points
         pointsLabel.snp.makeConstraints { make in
@@ -287,28 +258,26 @@ class TaskCellEditController: NSObject {
         
         // Routine
         routineLabel.snp.makeConstraints { make in
-            make.top.equalToSuperview().offset(8)
+            make.centerY.equalToSuperview()
             make.left.equalToSuperview().offset(8)
-            make.right.equalToSuperview().offset(-8)
         }
         
         routineSwitch.snp.makeConstraints { make in
-            make.top.equalTo(routineLabel.snp.bottom).offset(4)
-            make.centerX.equalToSuperview()
-        }
-        
-        // Optional
-        optionalLabel.snp.makeConstraints { make in
-            make.top.equalToSuperview().offset(8)
-            make.left.equalToSuperview().offset(8)
+            make.centerY.equalToSuperview()
             make.right.equalToSuperview().offset(-8)
         }
         
-        optionalSwitch.snp.makeConstraints { make in
-            make.top.equalTo(optionalLabel.snp.bottom).offset(4)
-            make.centerX.equalToSuperview()
+        // Optional - updated to position label and switch on the same line
+        optionalLabel.snp.makeConstraints { make in
+            make.centerY.equalToSuperview()
+            make.left.equalToSuperview().offset(8)
         }
         
+        optionalSwitch.snp.makeConstraints { make in
+            make.centerY.equalToSuperview()
+            make.right.equalToSuperview().offset(-8)
+        }
+
         // Set up field delegates for navigation between fields
         setupTextFieldDelegates()
 
@@ -460,7 +429,7 @@ class TaskCellEditController: NSObject {
         }
     }
     
-    @objc private func saveButtonTapped() {
+    @objc func saveButtonTapped() {
         guard let task = task, let cell = cell as? TaskTableViewCell else { return }
         
         // Get target value for max validation
@@ -499,7 +468,7 @@ class TaskCellEditController: NSObject {
         }
     }
     
-    @objc private func cancelButtonTapped() {
+    @objc func cancelButtonTapped() {
         guard let cell = cell as? TaskTableViewCell else { return }
         
         // First, notify delegate of cancellation
@@ -542,43 +511,6 @@ class TaskCellEditController: NSObject {
         optionalSwitch.isOn = false
     }
     
-    private func setupKeyboardAccessibility() {
-        // Add input accessory views to all text fields to provide a "Done" button
-        addDoneButtonToTextField(titleField)
-        addDoneButtonToTextField(pointsField)
-        addDoneButtonToTextField(targetField)
-        addDoneButtonToTextField(rewardField)
-        addDoneButtonToTextField(maxField)
-        
-        // Register for keyboard notifications
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillShow),
-            name: UIResponder.keyboardWillShowNotification,
-            object: nil
-        )
-        
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(keyboardWillHide),
-            name: UIResponder.keyboardWillHideNotification,
-            object: nil
-        )
-    }
-
-    private func addDoneButtonToTextField(_ textField: UITextField) {
-        let toolbar = UIToolbar()
-        toolbar.sizeToFit()
-        
-        let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let doneButton = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(dismissKeyboard))
-        let saveButton = UIBarButtonItem(title: "Save", style: .done, target: self, action: #selector(saveButtonTapped))
-        let cancelButton = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(cancelButtonTapped))
-        
-        toolbar.items = [cancelButton, flexSpace, doneButton, saveButton]
-        textField.inputAccessoryView = toolbar
-    }
-
     @objc private func keyboardWillShow(notification: NSNotification) {
         guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
               let cell = self.cell else {
@@ -692,8 +624,6 @@ class TaskCellEditController: NSObject {
 
     // Add this property to your class
     private var tapGestureRecognizer: UITapGestureRecognizer?
-
-
     
     private func createInputAccessoryView() -> UIView {
         // Create a container view to hold our buttons
@@ -704,15 +634,6 @@ class TaskCellEditController: NSObject {
         let borderView = UIView()
         borderView.backgroundColor = UIColor.systemGray5
         
-        // Create cancel button with appropriate styling
-        let cancelButton = UIButton(type: .system)
-        cancelButton.setTitle("Cancel", for: .normal)
-        cancelButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .regular)
-        cancelButton.backgroundColor = UIColor.systemRed.withAlphaComponent(0.1)
-        cancelButton.setTitleColor(.systemRed, for: .normal)
-        cancelButton.layer.cornerRadius = 8
-        cancelButton.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
-        
         // Create save button with appropriate styling
         let saveButton = UIButton(type: .system)
         saveButton.setTitle("Save", for: .normal)
@@ -721,6 +642,15 @@ class TaskCellEditController: NSObject {
         saveButton.setTitleColor(.systemGreen, for: .normal)
         saveButton.layer.cornerRadius = 8
         saveButton.addTarget(self, action: #selector(saveButtonTapped), for: .touchUpInside)
+        
+        // Create cancel button with appropriate styling
+        let cancelButton = UIButton(type: .system)
+        cancelButton.setTitle("Cancel", for: .normal)
+        cancelButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .regular)
+        cancelButton.backgroundColor = UIColor.systemRed.withAlphaComponent(0.1)
+        cancelButton.setTitleColor(.systemRed, for: .normal)
+        cancelButton.layer.cornerRadius = 8
+        cancelButton.addTarget(self, action: #selector(cancelButtonTapped), for: .touchUpInside)
         
         // Add subviews to container
         containerView.addSubview(borderView)
@@ -755,7 +685,7 @@ class TaskCellEditController: NSObject {
         return containerView
     }
 
-    // Update the method to apply accessory view
+    // Make sure we apply this properly to all text fields
     private func applyAccessoryViewToAllTextFields() {
         let accessoryView = createInputAccessoryView()
         
@@ -765,13 +695,10 @@ class TaskCellEditController: NSObject {
         rewardField.inputAccessoryView = accessoryView
         maxField.inputAccessoryView = accessoryView
     }
-    // Call this in your setupEditControls() method after creating the text fields
-    // applyAccessoryViewToAllTextFields()
 }
 
 extension TaskCellEditController: UITextFieldDelegate {
     
-    // Add this to the setupEditControls method to set up delegates for text fields
     private func setupTextFieldDelegates() {
         titleField.delegate = self
         pointsField.delegate = self
@@ -787,10 +714,6 @@ extension TaskCellEditController: UITextFieldDelegate {
         maxField.returnKeyType = .done
     }
     
-    // Call this method at the end of your setupEditControls method
-    // setupTextFieldDelegates()
-    
-    // Handle return key presses to move between fields
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         if textField == titleField {
             pointsField.becomeFirstResponder()
@@ -808,28 +731,4 @@ extension TaskCellEditController: UITextFieldDelegate {
         
         return true
     }
-    
-    // Add a "Done" button to number pads (which don't have a return key)
-    private func addDoneButtonToNumberPad(_ textField: UITextField) {
-        let toolBar = UIToolbar()
-        toolBar.sizeToFit()
-        
-        let flexSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
-        let doneButton = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(dismissKeyboard))
-        
-        toolBar.items = [flexSpace, doneButton]
-        textField.inputAccessoryView = toolBar
-    }
-    
-    // Add this method to configure input accessory views for numeric fields
-    private func configureInputAccessoryViews() {
-        addDoneButtonToNumberPad(pointsField)
-        addDoneButtonToNumberPad(targetField)
-        addDoneButtonToNumberPad(rewardField)
-        addDoneButtonToNumberPad(maxField)
-    }
-    
-    // Call this method at the end of your setupEditControls method
-    // configureInputAccessoryViews()
 }
-

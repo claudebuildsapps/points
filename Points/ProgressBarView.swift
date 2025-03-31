@@ -1,55 +1,56 @@
-import UIKit
+import SwiftUI
 
-class ProgressBarView: UIView {
-    // Progress bar
-    private let progressBar: UIProgressView = {
-        let bar = UIProgressView(progressViewStyle: .default)
-        bar.translatesAutoresizingMaskIntoConstraints = false
-        bar.progressTintColor = .systemGreen
-        bar.trackTintColor = .systemGray5
-        bar.layer.cornerRadius = 0 // No rounding
-        bar.clipsToBounds = true
-        return bar
-    }()
+struct ProgressBarView: View {
+    // MARK: - Properties
+    @State private var progress: Float = 0.0 // State to manage progress value
     
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        setupView()
+    // MARK: - Body
+    var body: some View {
+        ProgressView(value: progress, total: 1.0)
+            .progressViewStyle(LinearProgressViewStyle())
+            .tint(progressColor)
+            .background(Color.gray.opacity(0.2)) // Equivalent to trackTintColor
+            .frame(height: 6) // Make it thicker (equivalent to transform scale)
+            .clipShape(RoundedRectangle(cornerRadius: 0)) // No rounding
     }
     
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setupView()
-    }
-    
-    private func setupView() {
-        backgroundColor = .clear
-        addSubview(progressBar)
-        
-        // Configure the progress bar
-        progressBar.transform = CGAffineTransform(scaleX: 1.0, y: 1.5) // Make it thicker
-        
-        // Make progress bar fill the entire view
-        NSLayoutConstraint.activate([
-            progressBar.topAnchor.constraint(equalTo: topAnchor),
-            progressBar.leadingAnchor.constraint(equalTo: leadingAnchor),
-            progressBar.trailingAnchor.constraint(equalTo: trailingAnchor),
-            progressBar.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
-    }
-    
-    // Public method to update progress
-    func updateProgress(_ progress: Float, animated: Bool = true) {
-        progressBar.setProgress(progress, animated: animated)
-        
-        // Update color based on progress - yellow to green
+    // MARK: - Computed Properties
+    private var progressColor: Color {
         if progress < 0.5 {
-            progressBar.progressTintColor = .systemYellow
+            return .yellow
         } else if progress < 0.8 {
-            // Create intermediate color - yellow-green
-            progressBar.progressTintColor = UIColor(red: 0.5, green: 0.8, blue: 0.2, alpha: 1.0)
+            return Color(red: 0.5, green: 0.8, blue: 0.2) // Yellow-green
         } else {
-            progressBar.progressTintColor = .systemGreen
+            return .green
+        }
+    }
+    
+    // MARK: - Methods
+    /// Updates the progress value, optionally with animation
+    func updateProgress(_ progress: Float, animated: Bool = true) {
+        if animated {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                self.progress = max(0, min(progress, 1.0)) // Clamp between 0 and 1
+            }
+        } else {
+            self.progress = max(0, min(progress, 1.0))
         }
     }
 }
+
+// MARK: - Preview
+struct ProgressBarView_Previews: PreviewProvider {
+    static var previews: some View {
+        ProgressBarView()
+            .frame(width: 300, height: 20)
+            .onAppear {
+                // Simulate progress update for preview
+                let view = ProgressBarView()
+                view.updateProgress(0.7)
+                // Remove the return statement
+            }
+            .previewLayout(.sizeThatFits)
+            .padding()
+    }
+}
+
