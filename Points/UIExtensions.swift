@@ -67,10 +67,10 @@ struct LightTheme: AppTheme {
     var shadow = Color.black.opacity(0.1)
     
     // Task states
-    var taskBackgroundComplete = Color.green.opacity(0.3)
-    var taskBackgroundPartial = Color.green.opacity(0.15)
+    var taskBackgroundComplete = Color("InversionGreen").opacity(0.4)
+    var taskBackgroundPartial = Color("InversionGreen").opacity(0.2)
     var taskBackgroundIncomplete = Color.clear
-    var taskHighlight = Color.green.opacity(0.35)
+    var taskHighlight = Color("InversionGreen").opacity(0.5)
 }
 
 /// Dark theme implementation
@@ -84,14 +84,14 @@ struct DarkTheme: AppTheme {
     var textPrimary = Color(UIColor.label)
     var textSecondary = Color(UIColor.secondaryLabel)
     var textTertiary = Color(UIColor.tertiaryLabel)
-    var textInverted = Color.black
+    var textInverted = Color.white
     
     // Tab colors
     var routinesTab = Color("InversionGreen")
     var tasksTab = Color("InversionBlue")
     var templateTab = Color("lighterYellowInversion")
-    var summaryTab = Color(red: 0.3, green: 0.4, blue: 0.5)
-    var dataTab = Color(red: 0.2, green: 0.5, blue: 0.6)
+    var summaryTab = Color(red: 0.4, green: 0.5, blue: 0.6)
+    var dataTab = Color(red: 0.45, green: 0.6, blue: 0.7)
     
     // UI Element colors
     var progressBackground = Color(UIColor.systemGray6)
@@ -102,10 +102,10 @@ struct DarkTheme: AppTheme {
     var shadow = Color.black.opacity(0.3)
     
     // Task states
-    var taskBackgroundComplete = Color.green.opacity(0.5)
-    var taskBackgroundPartial = Color.green.opacity(0.25)
+    var taskBackgroundComplete = Color("InversionGreen").opacity(0.6)
+    var taskBackgroundPartial = Color("InversionGreen").opacity(0.3)
     var taskBackgroundIncomplete = Color(UIColor.systemGray6).opacity(0.3)
-    var taskHighlight = Color.green.opacity(0.5)
+    var taskHighlight = Color("InversionGreen").opacity(0.7)
 }
 
 /// Theme manager class to handle theme switching
@@ -141,6 +141,11 @@ class ThemeManager: ObservableObject {
         } else {
             setTheme(.dark)
         }
+    }
+    
+    /// Check if currently using dark mode
+    var isDarkMode: Bool {
+        return colorScheme == .dark
     }
     
     /// Follow system setting
@@ -194,10 +199,14 @@ extension View {
     // Theme-aware circle button
     func themeCircleButton(color: Color, textColor: Color? = nil, size: CGFloat = 32) -> some View {
         self
-            .font(.system(size: size * 0.5, weight: .bold))
+            .font(.system(size: size * 0.5, weight: .heavy)) // Increased weight for better readability
             .foregroundColor(textColor ?? Color(.systemBackground))
             .frame(width: size, height: size)
-            .background(Circle().fill(color))
+            .background(
+                Circle()
+                    .fill(color)
+                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1) // Added subtle shadow
+            )
             .contentShape(Circle())
     }
     

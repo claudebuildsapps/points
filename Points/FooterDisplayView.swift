@@ -34,12 +34,14 @@ struct FooterDisplayView: View {
     @State private var isAnimating: Bool = false
     @Binding var selectedTab: Int
     @Environment(\.theme) private var theme
+    @Environment(\.colorScheme) private var colorScheme
     
     // Closures to handle button actions
     var onAddButtonTapped: () -> Void = {}
     var onClearButtonTapped: () -> Void = {}
     var onSoftResetButtonTapped: () -> Void = {}
     var onCreateNewTaskInEditMode: () -> Void = {}
+    var onThemeToggle: () -> Void = {}
     
     // MARK: - Initialization
     init(
@@ -47,13 +49,15 @@ struct FooterDisplayView: View {
         onAddButtonTapped: @escaping () -> Void = {},
         onClearButtonTapped: @escaping () -> Void = {},
         onSoftResetButtonTapped: @escaping () -> Void = {},
-        onCreateNewTaskInEditMode: @escaping () -> Void = {}
+        onCreateNewTaskInEditMode: @escaping () -> Void = {},
+        onThemeToggle: @escaping () -> Void = {}
     ) {
         self._selectedTab = selectedTab
         self.onAddButtonTapped = onAddButtonTapped
         self.onClearButtonTapped = onClearButtonTapped
         self.onSoftResetButtonTapped = onSoftResetButtonTapped
         self.onCreateNewTaskInEditMode = onCreateNewTaskInEditMode
+        self.onThemeToggle = onThemeToggle
     }
     
     // MARK: - Body
@@ -81,14 +85,14 @@ struct FooterDisplayView: View {
                     action: {}
                 )
                 
-                // Database button
+                // Theme toggle button
                 tabButton(
-                    icon: "cylinder.split.1x2", 
+                    icon: colorScheme == .dark ? "sun.max.fill" : "moon.fill", 
                     color: theme.dataTab, 
-                    action: {}
+                    action: onThemeToggle
                 )
             }
-            .padding(.bottom, 0.5)
+            .padding(.bottom, 14) // Doubled from 7 to 14 for increased spacing between buttons and tabs
             .background(Color.clear)
             .frame(height: 44)
             
@@ -96,7 +100,7 @@ struct FooterDisplayView: View {
             TabBarView(onTabSelected: { index in
                 selectedTab = index
             })
-            .frame(height: 42) // Reduced by ~30% from original 60
+            .frame(height: 50) // Increased by 20% from 42 to 50
         }
     }
     

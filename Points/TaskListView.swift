@@ -20,34 +20,38 @@ struct TaskListView: View {
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            List {
-                ForEach(tasks, id: \.self) { task in
-                    TaskCellView(
-                        task: task,
-                        onDecrement: {
-                            onDecrement(task)
-                        },
-                        onDelete: {
-                            onDelete(task)
-                        },
-                        onDuplicate: {
-                            onDuplicate(task)
-                        },
-                        onSaveEdit: { updatedValues in
-                            onSaveEdit(task, updatedValues)
-                        },
-                        onCancelEdit: {
-                            onCancelEdit()
-                        },
-                        onIncrement: {
-                            onIncrement(task)
-                        }
-                    )
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
+            // Use a ScrollView with VStack instead of List to have complete control over spacing
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(tasks, id: \.self) { task in
+                        TaskCellView(
+                            task: task,
+                            onDecrement: {
+                                onDecrement(task)
+                            },
+                            onDelete: {
+                                onDelete(task)
+                            },
+                            onDuplicate: {
+                                onDuplicate(task)
+                            },
+                            onSaveEdit: { updatedValues in
+                                onSaveEdit(task, updatedValues)
+                            },
+                            onCancelEdit: {
+                                onCancelEdit()
+                            },
+                            onIncrement: {
+                                onIncrement(task)
+                            }
+                        )
+                    }
                 }
+                .padding(.top, 0) // Explicitly set top padding to zero
+                .padding(.horizontal, 0) // Explicitly set horizontal padding to zero
             }
-            .listStyle(PlainListStyle())
+            .padding(0) // Remove all padding from ScrollView
+            .edgesIgnoringSafeArea(.horizontal)
         }
     }
 }

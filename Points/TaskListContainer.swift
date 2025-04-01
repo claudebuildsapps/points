@@ -24,6 +24,7 @@ struct TaskListContainer: View {
     }
     
     var body: some View {
+        // Task list view without any spacing at top to ensure it touches progress bar
         TaskListView(
             tasks: tasks,
             onDecrement: { task in

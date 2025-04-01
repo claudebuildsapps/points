@@ -55,7 +55,7 @@ struct MainView: View {
     // Initialize with nil to force system setting
     @StateObject private var themeManager = ThemeManager(colorScheme: nil)
     @State private var selectedTab = 0
-    @State private var showThemeSettings = false
+    // Removed showThemeSettings state as we'll use direct toggle
     @ObservedObject private var taskControllers = TaskControllers.shared
     
     // Called when the view appears - this ensures we're using system setting
@@ -128,6 +128,14 @@ struct MainView: View {
                         } else {
                             print("Reset button tapped in tab \(selectedTab)")
                         }
+                    },
+                    onThemeToggle: {
+                        // Toggle between light and dark mode
+                        if themeManager.colorScheme == .dark {
+                            themeManager.setTheme(.light)
+                        } else {
+                            themeManager.setTheme(.dark)
+                        }
                     }
                 )
             }
@@ -139,33 +147,10 @@ struct MainView: View {
             // Initialize theme based on system settings
             initializeTheme()
         }
-        .sheet(isPresented: $showThemeSettings) {
-            ThemeSettingsView(themeManager: themeManager)
-        }
         // Update the theme based on system color scheme when following system settings
         .onChange(of: systemColorScheme) { newColorScheme in
             themeManager.updateForSystemColorScheme(newColorScheme)
         }
-        // Add settings button
-        .overlay(
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        showThemeSettings = true
-                    }) {
-                        Image(systemName: "textformat.size")
-                            .font(.system(size: 20))
-                            .padding()
-                            .background(Circle().fill(Color(.systemGray5)))
-                            .foregroundColor(.primary)
-                    }
-                    .padding(.trailing, 16)
-                    .padding(.bottom, 100) // Position above tab bar
-                }
-            }
-        )
     }
 }
 
@@ -244,6 +229,7 @@ struct TaskNavigationView: View {
     @ObservedObject private var taskControllers = TaskControllers.shared
     
     var body: some View {
+        // Using zero spacing to ensure elements touch with no gaps
         VStack(spacing: 0) {
             // Date navigation at the top
             DateNavigationView(onDateChange: { dateEntity in
@@ -268,34 +254,36 @@ struct TaskNavigationView: View {
             .environment(\.managedObjectContext, context)
             .frame(height: 50)
             
-            // Progress bar
-            ProgressBarView(progress: $progress)
-                .frame(height: 18)
-                .padding(.vertical, 5)
-            
-            // Task list
-            if let dateEntity = currentDateEntity {
-                TaskListContainer(
-                    dateEntity: dateEntity,
-                    onPointsUpdated: { points in
-                        // Update points display
-                        NotificationCenter.default.post(
-                            name: Constants.Notifications.updatePointsDisplay,
-                            object: nil,
-                            userInfo: ["points": points]
-                        )
-                    },
-                    onProgressUpdated: { newProgress in
-                        // Update the progress binding with animation
-                        withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
-                            self.progress = newProgress
+            // Custom container to ensure progress bar touches list
+            VStack(spacing: 0) {
+                // Progress bar with doubled height (36pt)
+                ProgressBarView(progress: $progress)
+                
+                // Task list with absolutely no spacing
+                if let dateEntity = currentDateEntity {
+                    TaskListContainer(
+                        dateEntity: dateEntity,
+                        onPointsUpdated: { points in
+                            // Update points display
+                            NotificationCenter.default.post(
+                                name: Constants.Notifications.updatePointsDisplay,
+                                object: nil,
+                                userInfo: ["points": points]
+                            )
+                        },
+                        onProgressUpdated: { newProgress in
+                            // Update the progress binding with animation
+                            withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
+                                self.progress = newProgress
+                            }
                         }
-                    }
-                )
-                .environment(\.managedObjectContext, context)
-                // Add an ID to force complete redraw when date entity changes
-                .id("taskList-\(dateEntity.objectID.uriRepresentation().absoluteString)")
-            } else {
+                    )
+                    .padding(.top, 0) // Explicitly set top padding to zero
+                }
+            }
+            
+            // Show loading if no date entity
+            if currentDateEntity == nil {
                 Text("Loading...")
                     .font(.title)
                     .foregroundColor(.secondary)

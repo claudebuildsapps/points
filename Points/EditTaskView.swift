@@ -13,6 +13,7 @@ struct EditTaskView: View {
     @State private var isRoutine: Bool
     @State private var isOptional: Bool
     @State private var activeField: FieldType? = nil
+    @State private var showDeleteConfirmation: Bool = false
     @Environment(\.presentationMode) var presentationMode // For sheet dismissal
     @Environment(\.theme) private var theme // For theme support
     
@@ -22,13 +23,15 @@ struct EditTaskView: View {
 
     var onSave: ([String: Any]) -> Void
     var onCancel: () -> Void
+    var onDelete: (() -> Void)?
 
-    init(task: CoreDataTask, isExpanded: Binding<Bool>, isEditMode: Binding<Bool>, onSave: @escaping ([String: Any]) -> Void, onCancel: @escaping () -> Void) {
+    init(task: CoreDataTask, isExpanded: Binding<Bool>, isEditMode: Binding<Bool>, onSave: @escaping ([String: Any]) -> Void, onCancel: @escaping () -> Void, onDelete: (() -> Void)? = nil) {
         self.task = task
         self._isExpanded = isExpanded
         self._isEditMode = isEditMode
         self.onSave = onSave
         self.onCancel = onCancel
+        self.onDelete = onDelete
 
         // Initialize state with task values or defaults
         self._title = State(initialValue: task.title ?? "")
@@ -42,12 +45,29 @@ struct EditTaskView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Title Bar
-            Text("Edit Task")
-                .font(.system(size: 20, weight: .bold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(Color(.systemBackground))
+            // Title Bar with delete button
+            HStack {
+                Spacer()
+                
+                Text("Edit Task")
+                    .font(.system(size: 20, weight: .bold))
+                
+                Spacer()
+                
+                // Delete button - small trash icon in top right
+                if onDelete != nil {
+                    Button(action: {
+                        showDeleteConfirmation = true
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 18))
+                            .foregroundColor(.red)
+                    }
+                    .padding(.trailing, 16)
+                }
+            }
+            .padding(.vertical, 16)
+            .background(Color(.systemBackground))
                 
             // Content area
             ScrollView {
@@ -199,6 +219,21 @@ struct EditTaskView: View {
                 }
             )
             .transition(.move(edge: .bottom))
+        }
+        // Add delete confirmation dialog
+        .alert(isPresented: $showDeleteConfirmation) {
+            Alert(
+                title: Text("Delete Task"),
+                message: Text("Are you sure you want to delete this task? This action cannot be undone."),
+                primaryButton: .destructive(Text("Delete")) {
+                    // Handle deletion
+                    if let onDelete = onDelete {
+                        onDelete()
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                },
+                secondaryButton: .cancel()
+            )
         }
     }
     

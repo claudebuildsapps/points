@@ -9,24 +9,26 @@ struct ProgressBarView: View {
     }
     
     var body: some View {
-        ProgressView(value: Double(progress), total: 1.0)
-            .progressViewStyle(LinearProgressViewStyle())
-            .tint(progressColor)
-            .background(theme.progressBackground)
-            .frame(height: 18)
-            .clipShape(RoundedRectangle(cornerRadius: 0))
+        // Custom progress bar that fills the entire height
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                // Background
+                Rectangle()
+                    .fill(theme.progressBackground)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                
+                // Progress fill
+                Rectangle()
+                    .fill(theme.templateTab)
+                    .frame(width: geometry.size.width * CGFloat(progress), height: geometry.size.height)
+            }
+        }
+        .frame(height: 18)
     }
     
-    // Color changes based on progress level using theme
+    // Using template tab color consistently regardless of progress level
     private var progressColor: Color {
-        switch progress {
-        case ..<0.5:
-            return theme.progressLow
-        case 0.5..<0.8:
-            return theme.progressMedium
-        default:
-            return theme.progressHigh
-        }
+        return theme.templateTab
     }
     
     // Update progress with optional animation

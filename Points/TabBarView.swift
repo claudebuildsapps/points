@@ -29,32 +29,21 @@ struct TabBarView: View {
                     handleTabSelection(index: index)
                 }) {
                     Text(fixedTabTitles[index])
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 14, weight: .semibold)) // Increased weight for better readability
                         .foregroundColor(theme.textInverted)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.top, 10) // Add top padding (20% of 50px height)
+                        .padding(.bottom, 10) // Add bottom padding (20% of 50px height)
                         .background(getTabColor(index: index))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 0)
-                                .stroke(theme.textInverted, lineWidth: 2)
-                                .opacity(0.8)
-                        )
+                        // Remove border overlay to make tabs completely adjacent
                 }
                 
-                // Add divider after each tab (except the last)
-                if index < tabCount - 1 {
-                    Rectangle()
-                        .fill(theme.divider)
-                        .frame(width: 1)
-                }
+                // Remove dividers between tabs to make them completely adjacent
             }
         }
         .background(Color.clear)
         .edgesIgnoringSafeArea(.bottom)
-        .clipShape(RoundedRectangle(cornerRadius: 0))
-        .overlay(
-            Rectangle()
-                .stroke(theme.divider, lineWidth: 1)
-        )
+        // No rounded corners or borders to ensure tabs are completely adjacent
     }
     
     // MARK: - Methods

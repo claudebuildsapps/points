@@ -112,6 +112,11 @@ struct TaskCellView: View {
                     onCancelEdit()
                     isExpanded = false
                     isEditMode = false
+                },
+                onDelete: {
+                    onDelete()
+                    isExpanded = false
+                    isEditMode = false
                 }
             )
             .padding(.top, 20)
