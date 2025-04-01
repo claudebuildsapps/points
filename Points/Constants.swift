@@ -12,13 +12,31 @@ struct Constants {
         static let updatePointsDisplay = NSNotification.Name("UpdatePointsDisplay")
     }
     
-    // Theme colors 
+    // Theme colors are now defined in the AppTheme protocol
+    // This is kept for backward compatibility during transition
     struct Colors {
-        static let routinesTab = Color(red: 0.5, green: 0.7, blue: 0.6)  // Green
-        static let tasksTab = Color(red: 0.4, green: 0.6, blue: 0.8)      // Blue
-        static let templateTab = Color(red: 0.6, green: 0.65, blue: 0.75) // Bluish-purple
-        static let summaryTab = Color(red: 0.7, green: 0.6, blue: 0.5)    // Orange
-        static let dataTab = Color(red: 0.8, green: 0.5, blue: 0.4)       // Red
+        // Deprecated: Use AppTheme instead
+        // These will be removed once all views are converted to use the theme system
+        @available(*, deprecated, message: "Use theme.routinesTab instead")
+        static let routinesTab = Color("InversionGreen")
+        
+        @available(*, deprecated, message: "Use theme.tasksTab instead")
+        static let tasksTab = Color("InversionBlue")
+        
+        @available(*, deprecated, message: "Use theme.templateTab instead")
+        static let templateTab = Color("lighterYellowInversion")
+        
+        @available(*, deprecated, message: "Use theme.summaryTab instead")
+        static let summaryTab = Color(red: 0.7, green: 0.6, blue: 0.5)
+        
+        @available(*, deprecated, message: "Use theme.summaryTab instead")
+        static let summaryTabDark = Color(red: 0.3, green: 0.4, blue: 0.5)
+        
+        @available(*, deprecated, message: "Use theme.dataTab instead")
+        static let dataTab = Color(red: 0.8, green: 0.5, blue: 0.4)
+        
+        @available(*, deprecated, message: "Use theme.dataTab instead")
+        static let dataTabDark = Color(red: 0.2, green: 0.5, blue: 0.6)
     }
     
     // Default values

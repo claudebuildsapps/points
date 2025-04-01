@@ -27,42 +27,77 @@ class PointsObserver: ObservableObject {
     }
 }
 
+/// Unified footer view that combines tab navigation and task actions
 struct FooterDisplayView: View {
     // MARK: - Properties
     @ObservedObject var pointsObserver = PointsObserver()
     @State private var isAnimating: Bool = false
+    @Binding var selectedTab: Int
+    @Environment(\.theme) private var theme
     
     // Closures to handle button actions
-    let onAddButtonTapped: () -> Void
-    let onClearButtonTapped: () -> Void
-    let onSoftResetButtonTapped: () -> Void
-    let onCreateNewTaskInEditMode: () -> Void
+    var onAddButtonTapped: () -> Void = {}
+    var onClearButtonTapped: () -> Void = {}
+    var onSoftResetButtonTapped: () -> Void = {}
+    var onCreateNewTaskInEditMode: () -> Void = {}
+    
+    // MARK: - Initialization
+    init(
+        selectedTab: Binding<Int>,
+        onAddButtonTapped: @escaping () -> Void = {},
+        onClearButtonTapped: @escaping () -> Void = {},
+        onSoftResetButtonTapped: @escaping () -> Void = {},
+        onCreateNewTaskInEditMode: @escaping () -> Void = {}
+    ) {
+        self._selectedTab = selectedTab
+        self.onAddButtonTapped = onAddButtonTapped
+        self.onClearButtonTapped = onClearButtonTapped
+        self.onSoftResetButtonTapped = onSoftResetButtonTapped
+        self.onCreateNewTaskInEditMode = onCreateNewTaskInEditMode
+    }
     
     // MARK: - Body
     var body: some View {
-        // Horizontal layout aligned with tabs
-        HStack(spacing: 0) {
-            tabButton(icon: "plus", color: Constants.Colors.routinesTab, action: onAddButtonTapped)
-            tabButton(icon: "plus", color: Constants.Colors.tasksTab, action: onAddButtonTapped)
-            
-            // Points display
-            HStack {
-                Spacer()
-                Text("\(pointsObserver.points)")
-                    .circleButton(color: Constants.Colors.templateTab)
-                Spacer()
+        VStack(spacing: 0) {
+            // Buttons row - sits above tabs
+            HStack(spacing: 0) {
+                tabButton(icon: "plus", color: theme.routinesTab, action: onAddButtonTapped)
+                tabButton(icon: "plus", color: theme.tasksTab, action: onAddButtonTapped)
+                
+                // Points display
+                HStack {
+                    Spacer()
+                    Text("\(pointsObserver.points)")
+                        .themeCircleButton(color: theme.templateTab, textColor: theme.textInverted)
+                    Spacer()
+                }
+                .frame(width: UIScreen.main.bounds.width/5)
+                
+                // Help button
+                tabButton(
+                    icon: "?", 
+                    isText: true, 
+                    color: theme.summaryTab, 
+                    action: {}
+                )
+                
+                // Database button
+                tabButton(
+                    icon: "cylinder.split.1x2", 
+                    color: theme.dataTab, 
+                    action: {}
+                )
             }
-            .frame(width: UIScreen.main.bounds.width/5)
+            .padding(.bottom, 0.5)
+            .background(Color.clear)
+            .frame(height: 44)
             
-            // Help button
-            tabButton(icon: "?", isText: true, color: Constants.Colors.summaryTab, action: {})
-            
-            // Database button
-            tabButton(icon: "cylinder.split.1x2", color: Constants.Colors.dataTab, action: {})
+            // Tabs row - now part of the footer
+            TabBarView(onTabSelected: { index in
+                selectedTab = index
+            })
+            .frame(height: 42) // Reduced by ~30% from original 60
         }
-        .padding(.bottom, 0.5)
-        .background(Color.clear)
-        .frame(height: 44)
     }
     
     // Helper method to create consistent tab buttons
@@ -72,10 +107,10 @@ struct FooterDisplayView: View {
             Button(action: action) {
                 if isText {
                     Text(icon)
-                        .circleButton(color: color)
+                        .themeCircleButton(color: color, textColor: theme.textInverted)
                 } else {
                     Image(systemName: icon)
-                        .circleButton(color: color)
+                        .themeCircleButton(color: color, textColor: theme.textInverted)
                 }
             }
             Spacer()

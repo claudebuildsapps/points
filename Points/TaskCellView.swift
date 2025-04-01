@@ -3,6 +3,7 @@ import CoreData
 
 struct TaskCellView: View {
     @Environment(\.managedObjectContext) private var context
+    @Environment(\.theme) private var theme
     @ObservedObject var task: CoreDataTask
     @State private var isExpanded = false
     @State private var isEditMode = false
@@ -29,7 +30,7 @@ struct TaskCellView: View {
                 
                 // Flash overlay for completion animation
                 if flashBackground {
-                    Color.green.opacity(0.35)
+                    theme.taskHighlight
                         .allowsHitTesting(false)
                 }
                 
@@ -37,15 +38,16 @@ struct TaskCellView: View {
                 HStack(spacing: 8) {
                     // Action buttons
                     HStack(spacing: 5) {
-                        // Points indicator
+                        // Points indicator (no longer in a circle)
                         Text("\(Int(task.points?.doubleValue ?? 0))")
-                            .circleButton(color: Constants.Colors.templateTab)
+                            .font(.system(size: 19, weight: .medium))
+                            .foregroundColor(.secondary)
                             .frame(width: 45)
                         
                         // Edit button
                         Button(action: toggleEditMode) {
                             Image(systemName: "pencil")
-                                .circleButton(color: Constants.Colors.summaryTab)
+                                .themeCircleButton(color: theme.summaryTab, textColor: theme.textInverted)
                         }
                         .buttonStyle(PlainButtonStyle())
                         .frame(width: 45)
@@ -55,7 +57,7 @@ struct TaskCellView: View {
                         // Undo button
                         Button(action: handleDecrement) {
                             Image(systemName: "arrow.uturn.backward")
-                                .circleButton(color: Constants.Colors.dataTab)
+                                .themeCircleButton(color: theme.dataTab, textColor: theme.textInverted)
                         }
                         .buttonStyle(PlainButtonStyle())
                         .frame(width: 45)
@@ -69,7 +71,7 @@ struct TaskCellView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(task.title ?? "Untitled")
                             .font(.system(size: 19, weight: .medium))
-                            .foregroundColor(Color.gray.opacity(0.8))
+                            .foregroundColor(.primary)
                             .lineLimit(1)
                             .truncationMode(.tail)
                         
@@ -79,9 +81,12 @@ struct TaskCellView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                    // Completion counter
+                    // Completion counter with larger font and increased letter spacing
                     Text("\(Int(task.completed))/\(Int(task.target))")
-                        .circleButton(color: Constants.Colors.tasksTab)
+                        .font(.system(size: 24, weight: .medium)) // 25% larger than the original 19
+                        .foregroundColor(.secondary)
+                        .tracking(3) // Increased letter spacing by 50%
+                        .frame(width: 45)
                 }
                 .padding(.vertical, 12)
                 .padding(.horizontal, 8)
@@ -151,19 +156,23 @@ struct TaskCellView: View {
         }
     }
     
-    // Calculate background color based on completion
+    // Calculate background color based on completion using theme
     private func backgroundColor() -> Color {
         let completed = Int(task.completed)
         let target = Int(task.target)
         
         if completed >= target {
-            return Color.green.opacity(0.3)
+            return theme.taskBackgroundComplete
         } else if completed > 0 {
+            // For partial completion, we could either:
+            // 1. Use a fixed partial color from theme
+            // 2. Calculate an intermediate color based on progress
+            
+            // Option 2 (more dynamic):
             let progress = CGFloat(completed) / CGFloat(target)
-            let alpha = 0.05 + (progress * 0.2)
-            return Color.green.opacity(alpha)
+            return theme.taskBackgroundPartial.opacity(0.5 + progress * 0.5) // Adjust opacity based on progress
         } else {
-            return Color.clear
+            return theme.taskBackgroundIncomplete
         }
     }
 }

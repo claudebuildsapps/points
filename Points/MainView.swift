@@ -1,59 +1,257 @@
 import SwiftUI
 import CoreData
 
+// Global task manager and date helper - a simple way to access task actions from anywhere
+class TaskControllers: ObservableObject {
+    static let shared = TaskControllers()
+    
+    var dateHelper: DateHelper?
+    var taskManager: TaskManager?
+    var currentDateEntity: CoreDataDate?
+    
+    func initialize(context: NSManagedObjectContext) {
+        dateHelper = DateHelper(context: context)
+        taskManager = TaskManager(context: context)
+    }
+    
+    func addNewTask() {
+        guard let taskManager = taskManager, let dateEntity = currentDateEntity else { return }
+        taskManager.createTask(
+            title: "New Task", 
+            points: NSDecimalNumber(value: Constants.Defaults.taskPoints), 
+            target: Int16(Constants.Defaults.taskTarget), 
+            date: dateEntity
+        )
+    }
+    
+    func clearTasks() {
+        guard let taskManager = taskManager, let dateEntity = currentDateEntity else { return }
+        taskManager.clearTasks(for: dateEntity)
+        
+        // Send notification to update points display
+        NotificationCenter.default.post(
+            name: Constants.Notifications.updatePointsDisplay,
+            object: nil,
+            userInfo: ["points": 0]
+        )
+    }
+    
+    func softResetTasks() {
+        guard let taskManager = taskManager, let dateEntity = currentDateEntity else { return }
+        taskManager.resetTaskCompletions(for: dateEntity)
+        
+        // Update the points display
+        NotificationCenter.default.post(
+            name: Constants.Notifications.updatePointsDisplay, 
+            object: nil, 
+            userInfo: ["points": 0]
+        )
+    }
+}
+
 struct MainView: View {
     @Environment(\.managedObjectContext) private var context
+    @Environment(\.colorScheme) private var systemColorScheme
+    // Initialize with nil to force system setting
+    @StateObject private var themeManager = ThemeManager(colorScheme: nil)
     @State private var selectedTab = 0
+    @State private var showThemeSettings = false
+    @ObservedObject private var taskControllers = TaskControllers.shared
+    
+    // Called when the view appears - this ensures we're using system setting
+    private func initializeTheme() {
+        // Start with system setting by default
+        if themeManager.colorScheme == nil {
+            themeManager.updateForSystemColorScheme(systemColorScheme)
+        }
+    }
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Main content (fills entire screen except for tab bar)
+            // Main content (fills entire screen except for footer)
             VStack(spacing: 0) {
                 if selectedTab == 0 {
                     TaskNavigationView()
                         .environment(\.managedObjectContext, context)
+                        .onAppear {
+                            // Initialize the task controller when the view appears
+                            taskControllers.initialize(context: context)
+                        }
                 } else if selectedTab == 1 {
                     Text("Stats Coming Soon")
                         .font(.largeTitle)
                         .foregroundColor(.secondary)
-                } else {
+                } else if selectedTab == 2 {
                     Text("Settings Coming Soon")
+                        .font(.largeTitle)
+                        .foregroundColor(.secondary)
+                } else if selectedTab == 4 {
+                    // Show the Data Explorer for the Data tab
+                    DataExplorerView()
+                        .environment(\.managedObjectContext, context)
+                } else {
+                    Text("Coming Soon")
                         .font(.largeTitle)
                         .foregroundColor(.secondary)
                 }
                 
-                Spacer(minLength: 60) // Space for tab bar
+                // Create a dynamic spacer that adjusts to the footer height
+                GeometryReader { _ in 
+                    Color.clear
+                }
+                .frame(height: 0)
+                .padding(.bottom, 86) // Space for footer (44 for buttons + 42 for tabs)
             }
             
-            // Tab bar at the bottom
+            // Footer at the bottom (now includes both buttons and tabs)
             VStack(spacing: 0) {
                 Spacer()
-                TabBarView(onTabSelected: { index in
-                    selectedTab = index
-                })
-                .frame(height: 60)
+                FooterDisplayView(
+                    selectedTab: $selectedTab,
+                    onAddButtonTapped: {
+                        if selectedTab == 0 {
+                            taskControllers.addNewTask()
+                        } else {
+                            print("Add button tapped in tab \(selectedTab)")
+                        }
+                    },
+                    onClearButtonTapped: {
+                        if selectedTab == 0 {
+                            taskControllers.clearTasks()
+                        } else {
+                            print("Clear button tapped in tab \(selectedTab)")
+                        }
+                    },
+                    onSoftResetButtonTapped: {
+                        if selectedTab == 0 {
+                            taskControllers.softResetTasks()
+                        } else {
+                            print("Reset button tapped in tab \(selectedTab)")
+                        }
+                    }
+                )
             }
             .ignoresSafeArea(edges: .bottom)
+        }
+        .environment(\.theme, themeManager.currentTheme)
+        .preferredColorScheme(themeManager.colorScheme)
+        .onAppear {
+            // Initialize theme based on system settings
+            initializeTheme()
+        }
+        .sheet(isPresented: $showThemeSettings) {
+            ThemeSettingsView(themeManager: themeManager)
+        }
+        // Update the theme based on system color scheme when following system settings
+        .onChange(of: systemColorScheme) { newColorScheme in
+            themeManager.updateForSystemColorScheme(newColorScheme)
+        }
+        // Add settings button
+        .overlay(
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        showThemeSettings = true
+                    }) {
+                        Image(systemName: "textformat.size")
+                            .font(.system(size: 20))
+                            .padding()
+                            .background(Circle().fill(Color(.systemGray5)))
+                            .foregroundColor(.primary)
+                    }
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 100) // Position above tab bar
+                }
+            }
+        )
+    }
+}
+
+// Theme settings view
+struct ThemeSettingsView: View {
+    @ObservedObject var themeManager: ThemeManager
+    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.colorScheme) var systemColorScheme  // Access current system setting
+    
+    var body: some View {
+        NavigationView {
+            List {
+                Section(header: Text("APPEARANCE")) {
+                    Button(action: {
+                        themeManager.setTheme(.light)
+                    }) {
+                        HStack {
+                            Text("Light Mode")
+                            Spacer()
+                            if themeManager.colorScheme == .light {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    
+                    Button(action: {
+                        themeManager.setTheme(.dark)
+                    }) {
+                        HStack {
+                            Text("Dark Mode")
+                            Spacer()
+                            if themeManager.colorScheme == .dark {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    
+                    Button(action: {
+                        themeManager.useSystemTheme(systemColorScheme)
+                    }) {
+                        HStack {
+                            Text("System Setting")
+                            .font(.headline)
+                            Spacer()
+                            if themeManager.colorScheme == nil {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                    
+                    if themeManager.colorScheme == nil {
+                        HStack {
+                            Text("Current system setting:")
+                            Spacer()
+                            Text(systemColorScheme == .dark ? "Dark Mode" : "Light Mode")
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.leading, 20)
+                    }
+                }
+            }
+            .navigationTitle("Theme Settings")
+            .navigationBarItems(trailing: Button("Done") {
+                presentationMode.wrappedValue.dismiss()
+            })
         }
     }
 }
 
 struct TaskNavigationView: View {
     @Environment(\.managedObjectContext) private var context
+    @Environment(\.theme) private var theme
     @State private var currentDate = Calendar.current.startOfDay(for: Date())
     @State private var currentDateEntity: CoreDataDate?
     @State private var progress: Float = 0
-    
-    // Initialize dateHelper using the environment context
-    private var dateHelper: DateHelper {
-        DateHelper(context: context)
-    }
+    @ObservedObject private var taskControllers = TaskControllers.shared
     
     var body: some View {
         VStack(spacing: 0) {
             // Date navigation at the top
             DateNavigationView(onDateChange: { dateEntity in
                 self.currentDateEntity = dateEntity
+                
+                // Update the shared controller with current date entity
+                taskControllers.currentDateEntity = dateEntity
+                
                 if let dateValue = dateEntity.date {
                     self.currentDate = dateValue
                     
@@ -77,8 +275,16 @@ struct TaskNavigationView: View {
             
             // Task list
             if let dateEntity = currentDateEntity {
-                TaskListWithControls(
-                    currentDateEntity: dateEntity,
+                TaskListContainer(
+                    dateEntity: dateEntity,
+                    onPointsUpdated: { points in
+                        // Update points display
+                        NotificationCenter.default.post(
+                            name: Constants.Notifications.updatePointsDisplay,
+                            object: nil,
+                            userInfo: ["points": points]
+                        )
+                    },
                     onProgressUpdated: { newProgress in
                         // Update the progress binding with animation
                         withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
@@ -101,9 +307,14 @@ struct TaskNavigationView: View {
     }
     
     private func initializeForToday() {
+        guard let dateHelper = taskControllers.dateHelper else { return }
+        
         if let dateEntity = dateHelper.getTodayEntity() {
             self.currentDateEntity = dateEntity
             self.currentDate = dateEntity.date ?? Date()
+            
+            // Update the shared controller with current date entity
+            taskControllers.currentDateEntity = dateEntity
             
             // Ensure we have tasks for today
             dateHelper.ensureTasksExist(for: dateEntity)

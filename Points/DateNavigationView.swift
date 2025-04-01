@@ -3,6 +3,7 @@ import CoreData
 
 struct DateNavigationView: View {
     @Environment(\.managedObjectContext) private var context
+    @Environment(\.theme) private var theme
     @State private var currentDate: Date = Date()
     let onDateChange: (CoreDataDate) -> Void
     
@@ -14,9 +15,11 @@ struct DateNavigationView: View {
             // Left arrow button
             navigationButton(direction: .backward)
             
-            // Date display
-            Text(currentDate.formatted())
-                .font(.headline)
+            // Date display with formatted date, lighter & larger font
+            Text(formattedDate())
+                .font(.headline.weight(.light))
+                .scaleEffect(1.2)
+                .foregroundColor(theme.textPrimary)
                 .frame(maxWidth: .infinity)
             
             // Right arrow button
@@ -27,6 +30,37 @@ struct DateNavigationView: View {
         .onChange(of: currentDate) { _ in updateDateEntity() }
     }
     
+    // Format date to "Month day number with suffix, year"
+    private func formattedDate() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d, yyyy"
+        let baseString = formatter.string(from: currentDate)
+        
+        let day = Calendar.current.component(.day, from: currentDate)
+        let suffix = daySuffix(for: day)
+        
+        // Replace the day number with day number + suffix
+        return baseString.replacingOccurrences(
+            of: " \(day),",
+            with: " \(day)\(suffix),"
+        )
+    }
+    
+    // Get the appropriate suffix for a day number
+    private func daySuffix(for day: Int) -> String {
+        // Special case for 11th, 12th, 13th
+        if day >= 11 && day <= 13 {
+            return "th"
+        }
+        
+        switch day % 10 {
+        case 1: return "st"
+        case 2: return "nd"
+        case 3: return "rd"
+        default: return "th"
+        }
+    }
+    
     // Helper enum for arrow directions
     private enum Direction { case forward, backward }
     
@@ -35,7 +69,7 @@ struct DateNavigationView: View {
         Button(action: { changeDate(by: direction == .forward ? 1 : -1) }) {
             Image(systemName: direction == .forward ? "chevron.right" : "chevron.left")
                 .font(.system(size: 24, weight: .bold))
-                .foregroundColor(Constants.Colors.templateTab)
+                .foregroundColor(theme.templateTab)
                 .frame(width: 44, height: 44)
         }
     }
@@ -69,7 +103,17 @@ struct DateNavigationView: View {
 
 struct DateNavigationView_Previews: PreviewProvider {
     static var previews: some View {
-        DateNavigationView(onDateChange: { _ in })
-            .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        Group {
+            DateNavigationView(onDateChange: { _ in })
+                .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+                .environment(\.theme, LightTheme())
+                .previewDisplayName("Light Mode")
+            
+            DateNavigationView(onDateChange: { _ in })
+                .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+                .environment(\.theme, DarkTheme())
+                .preferredColorScheme(.dark)
+                .previewDisplayName("Dark Mode")
+        }
     }
 }

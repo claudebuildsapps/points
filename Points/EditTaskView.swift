@@ -14,6 +14,7 @@ struct EditTaskView: View {
     @State private var isOptional: Bool
     @State private var activeField: FieldType? = nil
     @Environment(\.presentationMode) var presentationMode // For sheet dismissal
+    @Environment(\.theme) private var theme // For theme support
     
     enum FieldType {
         case title, points, target, reward, max

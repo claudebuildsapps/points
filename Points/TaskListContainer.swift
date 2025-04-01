@@ -8,7 +8,9 @@ struct TaskListContainer: View {
     var onProgressUpdated: (Float) -> Void
     
     // Use a TaskManager for operations
-    private let taskManager: TaskManager
+    private var taskManager: TaskManager {
+        TaskManager(context: context)
+    }
     
     // State property to hold tasks instead of using FetchRequest directly
     @State private var tasks: [CoreDataTask] = []
@@ -19,7 +21,6 @@ struct TaskListContainer: View {
         self.dateEntity = dateEntity
         self.onPointsUpdated = onPointsUpdated
         self.onProgressUpdated = onProgressUpdated
-        self.taskManager = TaskManager(context: PersistenceController.shared.container.viewContext)
     }
     
     var body: some View {
@@ -37,7 +38,7 @@ struct TaskListContainer: View {
             onSaveEdit: { task, updatedValues in
                 saveTaskEdit(task: task, updatedValues: updatedValues)
             },
-            onCancelEdit: { },
+            onCancelEdit: {},
             onIncrement: { task in
                 incrementTask(task)
             }
@@ -80,11 +81,7 @@ struct TaskListContainer: View {
         updateProgressBar()
         
         // Send notification for footer display
-        NotificationCenter.default.post(
-            name: Constants.Notifications.updatePointsDisplay,
-            object: nil,
-            userInfo: ["points": totalPoints]
-        )
+        NotificationCenter.default.postPointsUpdate(totalPoints)
     }
     
     private func updateProgressBar() {

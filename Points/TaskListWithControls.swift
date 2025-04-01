@@ -31,22 +31,10 @@ struct TaskListWithControls: View {
             // Add an ID to force redraw when date entity changes
             .id(currentDateEntity.objectID.uriRepresentation().absoluteString)
             
-            // Footer at the bottom with updated layout
-            FooterDisplayView(
-                onAddButtonTapped: {
-                    addNewTask()
-                },
-                onClearButtonTapped: {
-                    clearTasks()
-                },
-                onSoftResetButtonTapped: {
-                    softResetTasks()
-                },
-                onCreateNewTaskInEditMode: {
-                    // Not used currently
-                }
-            )
-            .frame(height: 44)
+            // Footer at the bottom with updated layout (dummy implementation for preview)
+            // The actual FooterDisplayView is now managed by MainView
+            // In a real app, communication would happen via @Environment or parent-child binding
+            EmptyView()
         }
     }
     

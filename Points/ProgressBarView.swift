@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProgressBarView: View {
     @Binding var progress: Float
+    @Environment(\.theme) var theme
     
     init(progress: Binding<Float> = .constant(0)) {
         self._progress = progress
@@ -11,20 +12,20 @@ struct ProgressBarView: View {
         ProgressView(value: Double(progress), total: 1.0)
             .progressViewStyle(LinearProgressViewStyle())
             .tint(progressColor)
-            .background(Color.gray.opacity(0.2))
+            .background(theme.progressBackground)
             .frame(height: 18)
             .clipShape(RoundedRectangle(cornerRadius: 0))
     }
     
-    // Color changes based on progress level
+    // Color changes based on progress level using theme
     private var progressColor: Color {
         switch progress {
         case ..<0.5:
-            return .yellow
+            return theme.progressLow
         case 0.5..<0.8:
-            return Color(red: 0.5, green: 0.8, blue: 0.2) // Yellow-green
+            return theme.progressMedium
         default:
-            return .green
+            return theme.progressHigh
         }
     }
     
