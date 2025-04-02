@@ -5,7 +5,9 @@ struct CustomNumericKeyboard: View {
     var isDecimal: Bool
     var colorScheme: ColorScheme
     var screenWidth: CGFloat
+    var showCancelButton: Bool = false
     var onDone: () -> Void
+    var onCancel: (() -> Void)? = nil
     
     private let keyboardRows: [[String]] = [
         ["1", "2", "3"],
@@ -76,20 +78,39 @@ struct CustomNumericKeyboard: View {
                     }
                 }
                 
-                // Function row with Cancel/Done buttons - full width
-                HStack(spacing: 6) {
-                    // Cancel button
-                    Button(action: {
-                        text = ""  // Clear the text and then dismiss
-                        onDone()
-                    }) {
-                        Text("Cancel")
-                            .font(.system(size: 20))
-                            .foregroundColor(.red)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 60)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(8)
+                // Function row with Cancel/Done buttons with more spacing
+                HStack(spacing: 12) { // Increased spacing between buttons
+                    // Cancel or Clear button
+                    if showCancelButton && onCancel != nil {
+                        // Cancel button that discards changes
+                        Button(action: {
+                            if let onCancel = onCancel {
+                                onCancel()
+                            }
+                        }) {
+                            Text("Cancel")
+                                .font(.system(size: 20))
+                                .foregroundColor(.red)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 60)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(8)
+                        }
+                        .padding(.leading, 8) // Add padding to push away from edge
+                    } else {
+                        // Clear button
+                        Button(action: {
+                            text = ""  // Just clear the text
+                        }) {
+                            Text("Clear")
+                                .font(.system(size: 20))
+                                .foregroundColor(.red)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 60)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(8)
+                        }
+                        .padding(.leading, 8) // Add padding to push away from edge
                     }
                     
                     // Done button
@@ -102,6 +123,7 @@ struct CustomNumericKeyboard: View {
                             .background(Color.blue)
                             .cornerRadius(8)
                     }
+                    .padding(.trailing, 8) // Add padding to push away from edge
                 }
             }
             .padding(5)

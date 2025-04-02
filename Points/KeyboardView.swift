@@ -4,7 +4,9 @@ import SwiftUI
 struct KeyboardView: View {
     @Binding var text: String
     var isDecimal: Bool
+    var showCancelButton: Bool = false
     var onDismiss: () -> Void
+    var onCancel: (() -> Void)? = nil
     @Environment(\.presentationMode) var presentationMode
     @Environment(\.colorScheme) var colorScheme // For dark/light mode
     @State private var keyboardVisible = false
@@ -12,10 +14,12 @@ struct KeyboardView: View {
     @State private var cursorPosition: Int // For cursor position
     
     // Initialize with current text and position cursor at the end
-    init(text: Binding<String>, isDecimal: Bool, onDismiss: @escaping () -> Void) {
+    init(text: Binding<String>, isDecimal: Bool, showCancelButton: Bool = false, onDismiss: @escaping () -> Void, onCancel: (() -> Void)? = nil) {
         self._text = text
         self.isDecimal = isDecimal
+        self.showCancelButton = showCancelButton
         self.onDismiss = onDismiss
+        self.onCancel = onCancel
         self._editingText = State(initialValue: text.wrappedValue)
         self._cursorPosition = State(initialValue: text.wrappedValue.count) // Position at end
     }
@@ -47,7 +51,9 @@ struct KeyboardView: View {
                                 onDone: {
                                     saveChanges()
                                     dismissWithAnimation()
-                                }
+                                },
+                                onCancel: onCancel,
+                                showCancelButton: showCancelButton
                             )
                         } else {
                             // Use numeric keyboard for numbers
@@ -56,10 +62,12 @@ struct KeyboardView: View {
                                 isDecimal: isDecimal,
                                 colorScheme: colorScheme,
                                 screenWidth: geometry.size.width,
+                                showCancelButton: showCancelButton,
                                 onDone: {
                                     saveChanges()
                                     dismissWithAnimation()
-                                }
+                                },
+                                onCancel: onCancel
                             )
                         }
                     }
@@ -166,6 +174,8 @@ struct TextKeyboard: View {
     var colorScheme: ColorScheme
     var screenWidth: CGFloat
     var onDone: () -> Void
+    var onCancel: (() -> Void)? = nil
+    var showCancelButton: Bool = false
     @State private var isShiftEnabled = false
     @State private var isNumericMode = false
     @State private var cursorBlinkOpacity: Double = 1.0
@@ -241,7 +251,7 @@ struct TextKeyboard: View {
             .background(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray5))
             
             // Main keyboard area - edge to edge
-            VStack(spacing: 3) {
+            VStack(spacing: 2) { // Reduced spacing between keyboard rows
                 // Standard QWERTY rows with edge-to-edge keys
                 ForEach(0..<keyboardRows.count, id: \.self) { rowIndex in
                     HStack(spacing: 2) {
@@ -292,8 +302,9 @@ struct TextKeyboard: View {
                     }
                 }
                 
-                // Bottom row with special keys, adjusted to fit screen width
+                // Bottom row with special keys, with reduced height
                 HStack(spacing: 2) {
+                    // Using reduced spacing compared to the other rows
                     // 123 button - smaller
                     Button(action: {
                         // Toggle numeric mode
@@ -322,14 +333,14 @@ struct TextKeyboard: View {
                             .cornerRadius(6)
                     }
                     
-                    // Space - narrower
+                    // Space - narrower when cancel button is shown
                     Button(action: {
                         handleSpecialKeyPress(" ")
                     }) {
                         Text("Space")
                             .font(.system(size: 18))
                             .frame(height: keyHeight)
-                            .frame(width: keyWidth * 3.5) // Make it narrower than before
+                            .frame(width: showCancelButton ? keyWidth * 2.8 : keyWidth * 3.5)
                             .background(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4))
                             .foregroundColor(.primary)
                             .cornerRadius(6)
@@ -348,22 +359,42 @@ struct TextKeyboard: View {
                             .cornerRadius(6)
                     }
                     
-                    // Done button - wider
+                    // Cancel button - shown conditionally
+                    if showCancelButton {
+                        Button(action: {
+                            if let onCancel = onCancel {
+                                onCancel()
+                            }
+                        }) {
+                            Text("Cancel")
+                                .font(.system(size: 16))
+                                .frame(height: keyHeight * 0.85) // Reduced height by 15%
+                                .frame(width: keyWidth * 1.5)
+                                .foregroundColor(.white)
+                                .background(Color.red)
+                                .cornerRadius(6)
+                        }
+                        .padding(.leading, 8) // Add padding to push away from edge
+                    }
+                    
+                    // Done button
                     Button(action: {
                         onDone()
                     }) {
                         Text("Done")
-                            .font(.system(size: 18, weight: .semibold))
-                            .frame(height: keyHeight)
-                            .frame(width: keyWidth * 2.0) // Make it wider
+                            .font(.system(size: 16, weight: .semibold))
+                            .frame(height: keyHeight * 0.85) // Reduced height by 15%
+                            .frame(width: showCancelButton ? keyWidth * 1.5 : keyWidth * 2.0)
                             .foregroundColor(.white)
                             .background(Color.blue)
                             .cornerRadius(6)
                     }
+                    .padding(.trailing, 8) // Add padding to push away from edge
                 }
             }
             .padding(.horizontal, 1) // Minimal padding to maximize keyboard size
-            .padding(.vertical, 5)
+            .padding(.top, 4)
+            .padding(.bottom, 0) // Further reduced bottom padding by another 20%
             .background(colorScheme == .dark ? Color.black : Color(.systemGray6))
         }
         .onAppear {

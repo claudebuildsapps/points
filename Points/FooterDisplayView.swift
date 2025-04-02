@@ -33,31 +33,40 @@ struct FooterDisplayView: View {
     @ObservedObject var pointsObserver = PointsObserver()
     @State private var isAnimating: Bool = false
     @Binding var selectedTab: Int
+    @Binding var taskFilter: TaskFilter
     @Environment(\.theme) private var theme
     @Environment(\.colorScheme) private var colorScheme
     
     // Closures to handle button actions
-    var onAddButtonTapped: () -> Void = {}
+    var onRoutineButtonTapped: () -> Void = {} // Specifically for the purple + button
+    var onTaskButtonTapped: () -> Void = {}    // Specifically for the blue + button
     var onClearButtonTapped: () -> Void = {}
     var onSoftResetButtonTapped: () -> Void = {}
     var onCreateNewTaskInEditMode: () -> Void = {}
     var onThemeToggle: () -> Void = {}
+    var onFilterChanged: (TaskFilter) -> Void = { _ in }
     
     // MARK: - Initialization
     init(
         selectedTab: Binding<Int>,
-        onAddButtonTapped: @escaping () -> Void = {},
+        taskFilter: Binding<TaskFilter>,
+        onRoutineButtonTapped: @escaping () -> Void = {},
+        onTaskButtonTapped: @escaping () -> Void = {},
         onClearButtonTapped: @escaping () -> Void = {},
         onSoftResetButtonTapped: @escaping () -> Void = {},
         onCreateNewTaskInEditMode: @escaping () -> Void = {},
-        onThemeToggle: @escaping () -> Void = {}
+        onThemeToggle: @escaping () -> Void = {},
+        onFilterChanged: @escaping (TaskFilter) -> Void = { _ in }
     ) {
         self._selectedTab = selectedTab
-        self.onAddButtonTapped = onAddButtonTapped
+        self._taskFilter = taskFilter
+        self.onRoutineButtonTapped = onRoutineButtonTapped
+        self.onTaskButtonTapped = onTaskButtonTapped
         self.onClearButtonTapped = onClearButtonTapped
         self.onSoftResetButtonTapped = onSoftResetButtonTapped
         self.onCreateNewTaskInEditMode = onCreateNewTaskInEditMode
         self.onThemeToggle = onThemeToggle
+        self.onFilterChanged = onFilterChanged
     }
     
     // MARK: - Body
@@ -65,14 +74,38 @@ struct FooterDisplayView: View {
         VStack(spacing: 0) {
             // Buttons row - sits above tabs
             HStack(spacing: 0) {
-                tabButton(icon: "plus", color: theme.routinesTab, action: onAddButtonTapped)
-                tabButton(icon: "plus", color: theme.tasksTab, action: onAddButtonTapped)
+                // Purple + button - ALWAYS creates a Routine
+                tabButton(icon: "plus", color: theme.routinesTab, action: onRoutineButtonTapped)
+                // Blue + button - ALWAYS creates a Task
+                tabButton(icon: "plus", color: theme.tasksTab, action: onTaskButtonTapped)
                 
-                // Points display
+                // Enhanced Points display
                 HStack {
                     Spacer()
-                    Text("\(pointsObserver.points)")
-                        .themeCircleButton(color: theme.templateTab, textColor: theme.textInverted)
+                    ZStack {
+                        // Outer glow effect
+                        Circle()
+                            .fill(theme.templateTab)
+                            .frame(width: 42, height: 42)
+                            .shadow(color: theme.templateTab.opacity(0.6), radius: 8, x: 0, y: 0)
+                        
+                        // Points display with animation
+                        VStack(spacing: 0) {
+                            Text("\(pointsObserver.points)")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(theme.textInverted)
+                                .contentTransition(.numericText())
+                                .scaleEffect(isAnimating ? 1.2 : 1.0)
+                            
+                            Text("pts")
+                                .font(.system(size: 8, weight: .medium))
+                                .foregroundColor(theme.textInverted.opacity(0.8))
+                                .offset(y: -2)
+                        }
+                        .padding(.top, 2)
+                    }
+                    .scaleEffect(isAnimating ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isAnimating)
                     Spacer()
                 }
                 .frame(width: UIScreen.main.bounds.width/5)
@@ -96,11 +129,49 @@ struct FooterDisplayView: View {
             .background(Color.clear)
             .frame(height: 44)
             
-            // Tabs row - now part of the footer
-            TabBarView(onTabSelected: { index in
-                selectedTab = index
+            // Tabs row - now part of the footer using the original TabBarView
+            TabBarView(
+                selectedIndex: selectedTab,
+                taskFilter: taskFilter,
+                onTabSelected: { index in
+                // Handle tab selection with proper toggling
+                if index == 0 {
+                    // Routines tab behavior
+                    if taskFilter == .routines {
+                        // Already filtering routines, toggle back to all
+                        onFilterChanged(.all)
+                    } else {
+                        // Apply routines filter
+                        onFilterChanged(.routines)
+                    }
+                } else if index == 1 {
+                    // Tasks tab behavior
+                    if taskFilter == .tasks {
+                        // Already filtering tasks, toggle back to all
+                        onFilterChanged(.all)
+                    } else {
+                        // Apply tasks filter
+                        onFilterChanged(.tasks)
+                    }
+                } else if index >= 2 {
+                    // Only change selected tab for tabs 2-4
+                    selectedTab = index
+                    
+                    // Reset filter when switching to other tabs
+                    onFilterChanged(.all)
+                }
             })
             .frame(height: 50) // Increased by 20% from 42 to 50
+        }
+    }
+    
+    // Helper to get the tab color for placeholder tabs
+    private func getTabColor(index: Int) -> Color {
+        switch index {
+            case 2: return theme.templateTab
+            case 3: return theme.summaryTab
+            case 4: return theme.dataTab
+            default: return .gray
         }
     }
     
@@ -143,6 +214,11 @@ struct FooterDisplayView: View {
         let totalFrames = Int(duration * frameRate)
         var currentFrame = 0
         
+        // Flash animation when points change
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isAnimating = true
+        }
+        
         Timer.scheduledTimer(withTimeInterval: 1.0 / frameRate, repeats: true) { timer in
             currentFrame += 1
             let percentage = Double(currentFrame) / Double(totalFrames)
@@ -150,7 +226,12 @@ struct FooterDisplayView: View {
             if percentage >= 1.0 {
                 self.pointsObserver.points = newPoints
                 DispatchQueue.main.async {
-                    self.isAnimating = false
+                    // Reset animation state with slight delay for visual effect
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            self.isAnimating = false
+                        }
+                    }
                 }
                 timer.invalidate()
             } else {

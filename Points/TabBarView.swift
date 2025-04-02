@@ -6,15 +6,43 @@ struct TabBarView: View {
     private let fixedTabTitles = ["Routines", "Tasks", "Template", "Summary", "Data"]
     @Environment(\.theme) private var theme
     
-    // Get the appropriate color based on the theme
-    private func getTabColor(index: Int) -> Color {
+    // Current selected tab index
+    var selectedIndex: Int = 0
+    
+    // Current filter state for color adjustments
+    var taskFilter: TaskFilter = .all
+    
+    // Initializer that accepts the filter state
+    init(
+        selectedIndex: Int = 0,
+        taskFilter: TaskFilter = .all,
+        onTabSelected: @escaping (Int) -> Void
+    ) {
+        self.selectedIndex = selectedIndex
+        self.taskFilter = taskFilter
+        self.onTabSelected = onTabSelected
+    }
+    
+    // Get the appropriate color based on the theme and filter state
+    private func getTabColor(index: Int) -> some View {
+        let baseColor: Color
         switch index {
-            case 0: return theme.routinesTab
-            case 1: return theme.tasksTab
-            case 2: return theme.templateTab
-            case 3: return theme.summaryTab
-            case 4: return theme.dataTab
-            default: return .gray
+            case 0: baseColor = theme.routinesTab
+            case 1: baseColor = theme.tasksTab
+            case 2: baseColor = theme.templateTab
+            case 3: baseColor = theme.summaryTab
+            case 4: baseColor = theme.dataTab
+            default: baseColor = .gray
+        }
+        
+        // Create a ZStack with white overlay for selected tabs
+        return ZStack {
+            baseColor
+            // Make visually LIGHTER when selected by adding white overlay
+            if (index == 0 && taskFilter == .routines) || 
+               (index == 1 && taskFilter == .tasks) {
+                Color.white.opacity(0.3) // Add white overlay = lighter
+            }
         }
     }
     

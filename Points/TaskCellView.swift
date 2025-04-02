@@ -37,20 +37,52 @@ struct TaskCellView: View {
                 // Content row
                 HStack(spacing: 8) {
                     // Action buttons
-                    HStack(spacing: 5) {
-                        // Points indicator (no longer in a circle)
-                        Text("\(Int(task.points?.doubleValue ?? 0))")
-                            .font(.system(size: 19, weight: .medium))
-                            .foregroundColor(.secondary)
-                            .frame(width: 45)
+                    HStack(spacing: 8) {
+                        // Eye-catching points indicator with badge-like design
+                        VStack(spacing: -2) {
+                            ZStack {
+                                // Points background
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(task.routine ? theme.routinesTab.opacity(0.15) : theme.tasksTab.opacity(0.15))
+                                    .frame(width: 45, height: 40)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(
+                                                task.routine ? theme.routinesTab : theme.tasksTab,
+                                                lineWidth: 2
+                                            )
+                                    )
+                                    .shadow(
+                                        color: (task.routine ? theme.routinesTab : theme.tasksTab).opacity(0.3),
+                                        radius: 2,
+                                        x: 0,
+                                        y: 1
+                                    )
+                                
+                                // Points value with "pts" label
+                                VStack(spacing: -1) {
+                                    Text("\(Int(task.points?.doubleValue ?? 0))")
+                                        .font(.system(size: 19, weight: .bold))
+                                        .foregroundColor(task.routine ? theme.routinesTab : theme.tasksTab)
+                                    
+                                    Text("pts")
+                                        .font(.system(size: 10, weight: .medium))
+                                        .foregroundColor((task.routine ? theme.routinesTab : theme.tasksTab).opacity(0.7))
+                                }
+                            }
+                        }
+                        .frame(width: 45)
                         
-                        // Edit button
+                        // Edit button - color based on whether it's a routine or task
                         Button(action: toggleEditMode) {
                             Image(systemName: "pencil")
-                                .themeCircleButton(color: theme.summaryTab, textColor: theme.textInverted)
+                                .themeCircleButton(
+                                    color: task.routine ? theme.routinesTab : theme.tasksTab,
+                                    textColor: theme.textInverted
+                                )
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .frame(width: 45)
+                        .frame(width: 40)
                         .contentShape(Rectangle())
                         .onTapGesture(perform: toggleEditMode)
 
@@ -60,7 +92,7 @@ struct TaskCellView: View {
                                 .themeCircleButton(color: theme.dataTab, textColor: theme.textInverted)
                         }
                         .buttonStyle(PlainButtonStyle())
-                        .frame(width: 45)
+                        .frame(width: 40)
                         .contentShape(Rectangle())
                         .onTapGesture(perform: handleDecrement)
                         .disabled(Int(task.completed) <= 0)
@@ -161,23 +193,29 @@ struct TaskCellView: View {
         }
     }
     
-    // Calculate background color based on completion using theme
+    // Calculate background color based on type (routine/task) and completion using theme
     private func backgroundColor() -> Color {
         let completed = Int(task.completed)
         let target = Int(task.target)
+        let isRoutine = task.routine
+        
+        // Base colors for task types - use tab colors
+        let routineBaseColor = theme.routinesTab
+        let taskBaseColor = theme.tasksTab
+        
+        // Choose base color based on item type
+        let baseColor = isRoutine ? routineBaseColor : taskBaseColor
         
         if completed >= target {
-            return theme.taskBackgroundComplete
+            // Completed state - more opaque
+            return baseColor.opacity(0.3)
         } else if completed > 0 {
-            // For partial completion, we could either:
-            // 1. Use a fixed partial color from theme
-            // 2. Calculate an intermediate color based on progress
-            
-            // Option 2 (more dynamic):
+            // Partially completed - adjust opacity based on progress
             let progress = CGFloat(completed) / CGFloat(target)
-            return theme.taskBackgroundPartial.opacity(0.5 + progress * 0.5) // Adjust opacity based on progress
+            return baseColor.opacity(0.15 + progress * 0.15) // Subtle opacity adjustment
         } else {
-            return theme.taskBackgroundIncomplete
+            // Not started yet - very subtle background
+            return baseColor.opacity(0.07)
         }
     }
 }

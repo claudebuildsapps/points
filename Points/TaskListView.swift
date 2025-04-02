@@ -12,6 +12,7 @@ struct TaskListView: View {
     var onSaveEdit: (CoreDataTask, [String: Any]) -> Void
     var onCancelEdit: () -> Void
     var onIncrement: (CoreDataTask) -> Void
+    var onMove: (IndexSet, Int) -> Void
 
     var body: some View {
         if tasks.isEmpty {
@@ -20,37 +21,38 @@ struct TaskListView: View {
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            // Use a ScrollView with VStack instead of List to have complete control over spacing
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(tasks, id: \.self) { task in
-                        TaskCellView(
-                            task: task,
-                            onDecrement: {
-                                onDecrement(task)
-                            },
-                            onDelete: {
-                                onDelete(task)
-                            },
-                            onDuplicate: {
-                                onDuplicate(task)
-                            },
-                            onSaveEdit: { updatedValues in
-                                onSaveEdit(task, updatedValues)
-                            },
-                            onCancelEdit: {
-                                onCancelEdit()
-                            },
-                            onIncrement: {
-                                onIncrement(task)
-                            }
-                        )
-                    }
+            // Use a List with .plain style for drag and drop functionality
+            List {
+                ForEach(tasks, id: \.self) { task in
+                    TaskCellView(
+                        task: task,
+                        onDecrement: {
+                            onDecrement(task)
+                        },
+                        onDelete: {
+                            onDelete(task)
+                        },
+                        onDuplicate: {
+                            onDuplicate(task)
+                        },
+                        onSaveEdit: { updatedValues in
+                            onSaveEdit(task, updatedValues)
+                        },
+                        onCancelEdit: {
+                            onCancelEdit()
+                        },
+                        onIncrement: {
+                            onIncrement(task)
+                        }
+                    )
+                    // Remove the default List row styling
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .background(Color(.systemBackground))
                 }
-                .padding(.top, 0) // Explicitly set top padding to zero
-                .padding(.horizontal, 0) // Explicitly set horizontal padding to zero
+                .onMove(perform: onMove) // Enable drag and drop reordering
             }
-            .padding(0) // Remove all padding from ScrollView
+            .listStyle(PlainListStyle()) // Use plain list style to remove separators and background
+            .environment(\.defaultMinListRowHeight, 0)
             .edgesIgnoringSafeArea(.horizontal)
         }
     }

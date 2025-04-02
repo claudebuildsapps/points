@@ -14,13 +14,16 @@ class TaskControllers: ObservableObject {
         taskManager = TaskManager(context: context)
     }
     
-    func addNewTask() {
+    func addNewTask(isRoutine: Bool = false) {
         guard let taskManager = taskManager, let dateEntity = currentDateEntity else { return }
         taskManager.createTask(
             title: "New Task", 
-            points: NSDecimalNumber(value: Constants.Defaults.taskPoints), 
+            points: NSDecimalNumber(value: isRoutine ? 3.0 : Constants.Defaults.taskPoints), 
             target: Int16(Constants.Defaults.taskTarget), 
-            date: dateEntity
+            date: dateEntity,
+            reward: NSDecimalNumber(value: isRoutine ? 1.0 : 0.0),
+            routine: isRoutine,
+            optional: isRoutine
         )
     }
     
@@ -55,7 +58,10 @@ struct MainView: View {
     // Initialize with nil to force system setting
     @StateObject private var themeManager = ThemeManager(colorScheme: nil)
     @State private var selectedTab = 0
-    // Removed showThemeSettings state as we'll use direct toggle
+    @State private var showCreateTaskSheet = false
+    @State private var createAsRoutine: Bool = true // CHANGED: Initialize to true by default
+    @State private var taskFilter: TaskFilter = .all // Add filter state
+    @State private var lastTabSelection = 0 // Track last tab selection to handle filter toggling
     @ObservedObject private var taskControllers = TaskControllers.shared
     
     // Called when the view appears - this ensures we're using system setting
@@ -108,11 +114,27 @@ struct MainView: View {
                 Spacer()
                 FooterDisplayView(
                     selectedTab: $selectedTab,
-                    onAddButtonTapped: {
-                        if selectedTab == 0 {
-                            taskControllers.addNewTask()
-                        } else {
-                            print("Add button tapped in tab \(selectedTab)")
+                    taskFilter: $taskFilter,  // Pass the filter binding
+                    onRoutineButtonTapped: {
+                        // The purple + button ALWAYS creates a routine
+                        
+                        // First set flag and then introduce a small delay
+                        createAsRoutine = true
+                        
+                        // Using DispatchQueue to ensure state is updated before presenting sheet
+                        DispatchQueue.main.async {
+                            showCreateTaskSheet = true
+                        }
+                    },
+                    onTaskButtonTapped: {
+                        // The blue + button ALWAYS creates a task
+                        
+                        // First set flag and then introduce a small delay
+                        createAsRoutine = false
+                        
+                        // Using DispatchQueue to ensure state is updated before presenting sheet
+                        DispatchQueue.main.async {
+                            showCreateTaskSheet = true
                         }
                     },
                     onClearButtonTapped: {
@@ -136,6 +158,14 @@ struct MainView: View {
                         } else {
                             themeManager.setTheme(.dark)
                         }
+                    },
+                    onFilterChanged: { newFilter in
+                        taskFilter = newFilter
+                        NotificationCenter.default.post(
+                            name: Constants.Notifications.taskListChanged,
+                            object: nil,
+                            userInfo: ["filter": newFilter]
+                        )
                     }
                 )
             }
@@ -150,6 +180,59 @@ struct MainView: View {
         // Update the theme based on system color scheme when following system settings
         .onChange(of: systemColorScheme) { newColorScheme in
             themeManager.updateForSystemColorScheme(newColorScheme)
+        }
+        // Task/Routine creation sheet
+        .sheet(isPresented: $showCreateTaskSheet) {
+            // CRITICAL: This flag determines if we're creating a routine or task
+            // createAsRoutine = true from routine button (purple + button)
+            // createAsRoutine = false from task button (blue + button)
+            let defaultRoutine = createAsRoutine
+            
+            TaskFormView(
+                mode: .create,
+                task: nil,
+                isPresented: $showCreateTaskSheet,
+                initialIsRoutine: defaultRoutine, // This controls the form state
+                onSave: { values in
+                    // Handle saving the new task/routine
+                    guard let dateEntity = taskControllers.currentDateEntity else { return }
+                    
+                    // Extract values from the form
+                    let title = values["title"] as? String ?? (defaultRoutine ? "New Routine" : "New Task")
+                    let points = values["points"] as? NSDecimalNumber ?? 
+                        NSDecimalNumber(value: defaultRoutine ? 3.0 : Constants.Defaults.taskPoints)
+                    let target = values["target"] as? Int16 ?? 3
+                    let reward = values["reward"] as? NSDecimalNumber ?? 
+                        NSDecimalNumber(value: defaultRoutine ? 1.0 : 0.0)
+                    let max = values["max"] as? Int16 ?? 3
+                    // Use the form's actual isRoutine value, with defaultRoutine as fallback
+                    let isRoutine = values["routine"] as? Bool ?? defaultRoutine
+                    let isOptional = values["optional"] as? Bool ?? true // Always default to optional=true
+                    
+                    // Create the task using task manager
+                    let newTask = taskControllers.taskManager?.createTask(
+                        title: title,
+                        points: points,
+                        target: target,
+                        date: dateEntity,
+                        reward: reward,
+                        max: max,
+                        routine: isRoutine,
+                        optional: isOptional
+                    )
+                    
+                    // Notify that the task list has changed
+                    NotificationCenter.default.post(
+                        name: Constants.Notifications.taskListChanged,
+                        object: nil,
+                        userInfo: ["task": newTask as Any]
+                    )
+                },
+                onCancel: {
+                    // Just dismiss
+                    showCreateTaskSheet = false
+                }
+            )
         }
     }
 }
@@ -256,7 +339,7 @@ struct TaskNavigationView: View {
             
             // Custom container to ensure progress bar touches list
             VStack(spacing: 0) {
-                // Progress bar with doubled height (36pt)
+                // Enhanced progress bar with integrated points display
                 ProgressBarView(progress: $progress)
                 
                 // Task list with absolutely no spacing

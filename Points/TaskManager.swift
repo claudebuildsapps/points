@@ -52,7 +52,16 @@ class TaskManager {
         return fetchRequest
     }
     
-    func createTask(title: String, points: NSDecimalNumber, target: Int16, date: CoreDataDate? = nil) -> CoreDataTask {
+    func createTask(
+        title: String,
+        points: NSDecimalNumber,
+        target: Int16,
+        date: CoreDataDate? = nil,
+        reward: NSDecimalNumber = NSDecimalNumber(value: 0),
+        max: Int16? = nil,
+        routine: Bool = false,
+        optional: Bool = false
+    ) -> CoreDataTask {
         let task = CoreDataTask(context: context)
         
         // Set basic properties
@@ -60,9 +69,11 @@ class TaskManager {
         task.points = points
         task.target = target
         task.completed = 0
-        task.max = target + 2
+        task.max = max ?? (target + 2) // Use provided max or default to target + 2
         task.position = Int16(fetchTasks().count)
-        task.routine = false
+        task.routine = routine
+        task.optional = optional
+        task.reward = reward
         
         // Associate with date
         task.date = date ?? dateHelper.getTodayEntity() ?? createFallbackDateEntity()
@@ -185,6 +196,32 @@ class TaskManager {
         
         // Send notification for UI updates
         NotificationCenter.default.postPointsUpdate(totalPoints)
+    }
+    
+    // MARK: - Task Ordering
+    
+    // Update the positions of tasks after one is moved
+    func updateTaskPositions(tasks: [CoreDataTask]) {
+        // Reassign positions based on new order
+        for (index, task) in tasks.enumerated() {
+            task.position = Int16(index)
+        }
+        
+        saveContext()
+    }
+    
+    // Move a task from one position to another
+    func moveTask(from source: IndexSet, to destination: Int, in taskList: [CoreDataTask]) -> [CoreDataTask] {
+        // Create a mutable copy of the tasks
+        var tasks = taskList
+        
+        // Perform the move operation
+        tasks.move(fromOffsets: source, toOffset: destination)
+        
+        // Update positions in the database
+        updateTaskPositions(tasks: tasks)
+        
+        return tasks
     }
     
     // MARK: - Helpers
