@@ -100,8 +100,10 @@ struct KeyboardView: View {
         // For debugging
         print("Checking if text field: isDecimal=\(isDecimal), text=\(text)")
         
-        // Simply check if decimal is false
-        return !isDecimal
+        // Only the title field should use the text keyboard
+        // All numeric fields (points, target, reward, max) should use the numeric keyboard
+        // regardless of whether they allow decimals or not
+        return false
     }
     
     private func dismissWithAnimation() {

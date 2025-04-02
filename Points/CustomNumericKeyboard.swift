@@ -23,26 +23,14 @@ struct CustomNumericKeyboard: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Top bar with value and clear button
-            ZStack {
+            // Top bar with value display only (no clear button)
+            HStack {
+                Spacer()
                 // Value display
                 Text(text.isEmpty ? "0" : text)
                     .font(.system(size: 26, weight: .semibold))
                     .padding()
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                
-                // Clear button at the right
-                HStack {
-                    Spacer()
-                    Button(action: {
-                        text = ""
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.gray)
-                    }
-                    .padding(.trailing, 16)
-                }
+                    .frame(alignment: .trailing)
             }
             .frame(height: 60)
             .background(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray5))

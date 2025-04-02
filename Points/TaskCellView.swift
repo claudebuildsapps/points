@@ -41,9 +41,9 @@ struct TaskCellView: View {
                         // Eye-catching points indicator with badge-like design
                         VStack(spacing: -2) {
                             ZStack {
-                                // Points background
+                                // Points background - dark colored background
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(task.routine ? theme.routinesTab.opacity(0.15) : theme.tasksTab.opacity(0.15))
+                                    .fill(task.routine ? theme.routinesTab : theme.tasksTab) // Full color background
                                     .frame(width: 45, height: 40)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
@@ -53,22 +53,25 @@ struct TaskCellView: View {
                                             )
                                     )
                                     .shadow(
-                                        color: (task.routine ? theme.routinesTab : theme.tasksTab).opacity(0.3),
+                                        color: (task.routine ? theme.routinesTab : theme.tasksTab).opacity(0.4),
                                         radius: 2,
                                         x: 0,
                                         y: 1
                                     )
                                 
-                                // Points value with "pts" label
-                                VStack(spacing: -1) {
+                                // Points value with "pts" label - bright white text for contrast
+                                VStack(spacing: 0) { // Vertical stack with minimal spacing
                                     Text("\(Int(task.points?.doubleValue ?? 0))")
-                                        .font(.system(size: 19, weight: .bold))
-                                        .foregroundColor(task.routine ? theme.routinesTab : theme.tasksTab)
+                                        .font(.system(size: 20, weight: .bold)) 
+                                        .foregroundColor(.white) // Pure white for maximum contrast
+                                        .fixedSize() // Prevent layout issues
                                     
                                     Text("pts")
-                                        .font(.system(size: 10, weight: .medium))
-                                        .foregroundColor((task.routine ? theme.routinesTab : theme.tasksTab).opacity(0.7))
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.white) // Pure white
+                                        .padding(.top, -2) // Tighten spacing
                                 }
+                                .padding(.horizontal, 2) // Add some padding to prevent edge touching
                             }
                         }
                         .frame(width: 45)
@@ -87,38 +90,72 @@ struct TaskCellView: View {
                         .onTapGesture(perform: toggleEditMode)
 
                         // Undo button
-                        Button(action: handleDecrement) {
+                        Button(action: {
+                            // Only perform action if there are completions to undo
+                            if Int(task.completed) > 0 {
+                                handleDecrement()
+                            }
+                            // Otherwise, do nothing when pressed
+                        }) {
                             Image(systemName: "arrow.uturn.backward")
                                 .themeCircleButton(color: theme.dataTab, textColor: theme.textInverted)
                         }
                         .buttonStyle(PlainButtonStyle())
                         .frame(width: 40)
                         .contentShape(Rectangle())
-                        .onTapGesture(perform: handleDecrement)
-                        .disabled(Int(task.completed) <= 0)
+                        // Remove separate onTapGesture since we're handling it in the Button action
                         .opacity(Int(task.completed) > 0 ? 1.0 : 0.5)
                     }
 
-                    // Task title and date
-                    VStack(alignment: .leading, spacing: 4) {
+                    // Task title only (removed date)
+                    VStack(alignment: .leading) {
                         Text(task.title ?? "Untitled")
-                            .font(.system(size: 19, weight: .medium))
+                            .font(.system(size: 20, weight: .medium))
                             .foregroundColor(.primary)
                             .lineLimit(1)
                             .truncationMode(.tail)
-                        
-                        Text(DateHelper.formatDate(task.date?.date))
-                            .captionText()
-                            .lineLimit(1)
+                            .padding(.vertical, 4) // Add vertical padding to center text
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                    // Completion counter with larger font and increased letter spacing
-                    Text("\(Int(task.completed))/\(Int(task.target))")
-                        .font(.system(size: 24, weight: .medium)) // 25% larger than the original 19
-                        .foregroundColor(.secondary)
-                        .tracking(3) // Increased letter spacing by 50%
-                        .frame(width: 45)
+                    // Enhanced slider-style completion tracker (back to oval shape)
+                    ZStack(alignment: .leading) {
+                        // Track background - oval shape
+                        Capsule()
+                            .fill(Color.gray.opacity(0.15))
+                            .frame(width: 80, height: 28) // Maintain increased size
+                        
+                        // Calculate position based on completion vs target
+                        let trackWidth: CGFloat = 80
+                        let circleSize: CGFloat = 28 // Maintain increased circle size
+                        
+                        // Calculate position (centered in each segment)
+                        let completionRatio = CGFloat(min(Int(task.completed), Int(task.target))) / CGFloat(max(Int(task.target), 1))
+                        let maxOffset = trackWidth - circleSize
+                        let circleOffset = completionRatio * maxOffset
+                        
+                        // Determine circle color based on completion vs target
+                        let circleColor = Int(task.completed) > Int(task.target) ? 
+                            theme.dataTab : // Use data tab color for going over target
+                            theme.templateTab // Use template tab color for normal progress
+                        
+                        // Sliding completion counter
+                        ZStack {
+                            // Circle with appropriate color
+                            Circle()
+                                .fill(circleColor)
+                                .frame(width: circleSize, height: circleSize)
+                                .shadow(color: Color.black.opacity(0.3), radius: 2, x: 0, y: 1)
+                            
+                            // Completion count with larger font
+                            Text("\(Int(task.completed))")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .offset(x: circleOffset)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: Int(task.completed))
+                    }
+                    .frame(width: 80, height: 32) // Maintain increased overall size
                 }
                 .padding(.vertical, 12)
                 .padding(.horizontal, 8)
@@ -174,6 +211,7 @@ struct TaskCellView: View {
             onDecrement()
             animateCompletionChange(from: previousCompleted)
         }
+        // When completions are zero, do nothing (no toggle or other action)
     }
 
     // Animate task completion

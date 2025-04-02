@@ -83,22 +83,23 @@ struct FooterDisplayView: View {
                 HStack {
                     Spacer()
                     ZStack {
-                        // Outer glow effect
+                        // Outer glow effect - 20% bigger
                         Circle()
                             .fill(theme.templateTab)
-                            .frame(width: 42, height: 42)
-                            .shadow(color: theme.templateTab.opacity(0.6), radius: 8, x: 0, y: 0)
+                            .frame(width: 50, height: 50) // Increased from 42
+                            .shadow(color: theme.templateTab.opacity(0.6), radius: 10, x: 0, y: 0)
                         
-                        // Points display with animation
+                        // Points display with animation - larger text
                         VStack(spacing: 0) {
                             Text("\(pointsObserver.points)")
-                                .font(.system(size: 18, weight: .bold))
+                                .font(.system(size: 22, weight: .bold)) // Increased from 18
                                 .foregroundColor(theme.textInverted)
-                                .contentTransition(.numericText())
+                                .fixedSize() // Prevent layout issues causing dots
+                                .minimumScaleFactor(0.8) // Allow some scaling if needed
                                 .scaleEffect(isAnimating ? 1.2 : 1.0)
                             
                             Text("pts")
-                                .font(.system(size: 8, weight: .medium))
+                                .font(.system(size: 10, weight: .medium)) // Increased from 8
                                 .foregroundColor(theme.textInverted.opacity(0.8))
                                 .offset(y: -2)
                         }

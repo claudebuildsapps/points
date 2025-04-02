@@ -339,7 +339,7 @@ struct TaskNavigationView: View {
             
             // Custom container to ensure progress bar touches list
             VStack(spacing: 0) {
-                // Enhanced progress bar with integrated points display
+                // Full-width progress bar with daily target
                 ProgressBarView(progress: $progress)
                 
                 // Task list with absolutely no spacing
