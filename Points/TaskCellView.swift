@@ -42,7 +42,7 @@ struct TaskCellView: View {
                 // Content row
                 HStack(spacing: 0) { // No default spacing - we'll control spacing individually
                     // Critical indicator (if task is critical)
-                    if task.critical {
+                    if task.getCritical() {
                         ZStack {
                             Circle()
                                 .fill(theme.criticalColor)

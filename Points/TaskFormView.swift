@@ -79,7 +79,7 @@ struct TaskFormView: View {
             self._isRoutine = State(initialValue: task.routine)
             self._isOptional = State(initialValue: task.optional)
             // Default critical to false if not set (for backward compatibility)
-            self._isCritical = State(initialValue: task.critical)
+            self._isCritical = State(initialValue: task.getCritical())
         } else {
             // Create mode - use defaults or provided initial values
             // IMPORTANT: respecting the initialIsRoutine flag from the button pressed

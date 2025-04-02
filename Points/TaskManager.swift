@@ -123,7 +123,7 @@ class TaskManager {
         task.position = Int16(fetchTasks().count)
         task.routine = routine
         task.optional = optional
-        task.critical = false // Default to non-critical
+        task.setCritical(false) // Default to non-critical
         task.reward = reward
         task.template = template
         
@@ -215,7 +215,8 @@ class TaskManager {
         newTask.completed = 0
         newTask.position = Int16(fetchTasks().count)
         newTask.routine = task.routine
-        newTask.critical = task.critical // Copy the critical status
+        // Copy the critical status using helper method
+        newTask.setCritical(task.getCritical())
         newTask.optional = task.optional
         newTask.reward = task.reward
         newTask.date = task.date
@@ -234,7 +235,7 @@ class TaskManager {
         if let reward = values["reward"] as? NSDecimalNumber { task.reward = reward }
         if let routine = values["routine"] as? Bool { task.routine = routine }
         if let optional = values["optional"] as? Bool { task.optional = optional }
-        if let critical = values["critical"] as? Bool { task.critical = critical }
+        if let critical = values["critical"] as? Bool { task.setCritical(critical) }
         
         saveContext()
         updateDatePoints(for: task.date)

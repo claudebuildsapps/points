@@ -32,7 +32,7 @@ public struct Task {
             active: coreDataTask.active,
             position: Int(coreDataTask.position),
             template: coreDataTask.template,
-            critical: coreDataTask.critical
+            critical: coreDataTask.getCritical()
         )
     }
 }
@@ -44,18 +44,14 @@ extension CoreDataTask {
         return template || date == nil
     }
     
-    // Add critical property for dynamic access (compatible with Core Data model)
-    // This is needed since we can't directly modify the Core Data model file
-    @objc var critical: Bool {
-        get {
-            // Access the value using key-value coding
-            // Default to false if not set (for backward compatibility)
-            return (value(forKey: "critical") as? Bool) ?? false
-        }
-        set {
-            // Set the value using key-value coding
-            setValue(newValue, forKey: "critical")
-        }
+    // Helper method to access the critical attribute in a type-safe way
+    func getCritical() -> Bool {
+        return (value(forKey: "critical") as? Bool) ?? false
+    }
+    
+    // Helper method to set the critical attribute
+    func setCritical(_ value: Bool) {
+        setValue(value, forKey: "critical")
     }
     
     // Create a date-specific instance from a template
@@ -72,7 +68,7 @@ extension CoreDataTask {
         instance.position = Int16(self.position) // Maintain position
         instance.routine = self.routine
         instance.optional = self.optional
-        instance.critical = self.critical  // Copy critical status
+        instance.setCritical(self.getCritical())  // Copy critical status
         instance.reward = self.reward
         instance.scalar = self.scalar
         instance.template = false // This is not a template
