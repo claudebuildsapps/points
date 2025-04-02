@@ -19,6 +19,7 @@
         <attribute name="routine" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="scalar" attributeType="Decimal" defaultValueString="1"/>
         <attribute name="target" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="template" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="title" attributeType="String" defaultValueString=""/>
         <relationship name="completions" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="CoreDataTaskCompletion" inverseName="task" inverseEntity="CoreDataTaskCompletion"/>
         <relationship name="date" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="CoreDataDate" inverseName="tasks" inverseEntity="CoreDataDate"/>

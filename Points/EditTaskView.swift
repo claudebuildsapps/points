@@ -10,6 +10,7 @@ struct EditTaskView: View {
     var onSave: ([String: Any]) -> Void
     var onCancel: () -> Void
     var onDelete: (() -> Void)?
+    var onCopyToTemplate: (() -> Void)?
     
     var body: some View {
         // Use our common TaskFormView in edit mode
@@ -19,7 +20,8 @@ struct EditTaskView: View {
             isPresented: $isExpanded,
             onSave: onSave,
             onCancel: onCancel,
-            onDelete: onDelete
+            onDelete: onDelete,
+            onCopyToTemplate: onCopyToTemplate
         )
     }
 }

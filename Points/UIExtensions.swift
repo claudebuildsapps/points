@@ -22,6 +22,7 @@ protocol AppTheme {
     var templateTab: Color { get }
     var summaryTab: Color { get }
     var dataTab: Color { get }
+    var criticalColor: Color { get } // New color for critical tasks
     
     // UI Element colors
     var progressBackground: Color { get }
@@ -57,6 +58,7 @@ struct LightTheme: AppTheme {
     var templateTab = Color("lighterYellowInversion")
     var summaryTab = Color(red: 0.7, green: 0.6, blue: 0.5)
     var dataTab = Color(red: 0.8, green: 0.5, blue: 0.4)
+    var criticalColor = Color.orange
     
     // UI Element colors
     var progressBackground = Color(UIColor.systemGray5)
@@ -92,6 +94,7 @@ struct DarkTheme: AppTheme {
     var templateTab = Color("lighterYellowInversion")
     var summaryTab = Color(red: 0.4, green: 0.5, blue: 0.6)
     var dataTab = Color(red: 0.45, green: 0.6, blue: 0.7)
+    var criticalColor = Color.orange.opacity(0.9)
     
     // UI Element colors
     var progressBackground = Color(UIColor.systemGray6)

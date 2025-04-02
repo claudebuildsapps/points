@@ -62,6 +62,7 @@ struct MainView: View {
     @State private var createAsRoutine: Bool = true // CHANGED: Initialize to true by default
     @State private var taskFilter: TaskFilter = .all // Add filter state
     @State private var lastTabSelection = 0 // Track last tab selection to handle filter toggling
+    @State private var showDeleteConfirmation = false // Confirmation for deleting all tasks
     @ObservedObject private var taskControllers = TaskControllers.shared
     
     // Called when the view appears - this ensures we're using system setting
@@ -88,9 +89,9 @@ struct MainView: View {
                         .font(.largeTitle)
                         .foregroundColor(.secondary)
                 } else if selectedTab == 2 {
-                    Text("Settings Coming Soon")
-                        .font(.largeTitle)
-                        .foregroundColor(.secondary)
+                    // Show the Templates view
+                    TemplatesView()
+                        .environment(\.managedObjectContext, context)
                 } else if selectedTab == 4 {
                     // Show the Data Explorer for the Data tab
                     DataExplorerView()
@@ -137,6 +138,22 @@ struct MainView: View {
                             showCreateTaskSheet = true
                         }
                     },
+                    onHomeButtonTapped: {
+                        // Home button always returns to the main tab and today's date
+                        selectedTab = 0 // Switch to main tab
+                        
+                        // Post notification to navigate to today's date
+                        NotificationCenter.default.post(
+                            name: Constants.Notifications.navigateToToday,
+                            object: nil
+                        )
+                    },
+                    onHelpButtonTapped: {
+                        // Only show delete confirmation when on main tab and there's a date entity
+                        if selectedTab == 0 && taskControllers.currentDateEntity != nil {
+                            showDeleteConfirmation = true
+                        }
+                    },
                     onClearButtonTapped: {
                         if selectedTab == 0 {
                             taskControllers.clearTasks()
@@ -181,6 +198,34 @@ struct MainView: View {
         .onChange(of: systemColorScheme) { newColorScheme in
             themeManager.updateForSystemColorScheme(newColorScheme)
         }
+        // Delete confirmation dialog
+        .alert(isPresented: $showDeleteConfirmation) {
+            Alert(
+                title: Text("Delete All Tasks"),
+                message: Text("This will delete ALL tasks for the current date. This action cannot be undone."),
+                primaryButton: .destructive(Text("Delete")) {
+                    // Perform the delete action
+                    if selectedTab == 0 && taskControllers.currentDateEntity != nil {
+                        taskControllers.clearTasks()
+                        
+                        // Ensure progress bar is updated
+                        NotificationCenter.default.post(
+                            name: Constants.Notifications.taskListChanged,
+                            object: nil
+                        )
+                        
+                        // Force UI refresh
+                        withAnimation(.easeInOut) {
+                            // Reset filter to ensure listview updates
+                            if taskFilter != .all {
+                                taskFilter = .all
+                            }
+                        }
+                    }
+                },
+                secondaryButton: .cancel(Text("Cancel"))
+            )
+        }
         // Task/Routine creation sheet
         .sheet(isPresented: $showCreateTaskSheet) {
             // CRITICAL: This flag determines if we're creating a routine or task
@@ -194,9 +239,6 @@ struct MainView: View {
                 isPresented: $showCreateTaskSheet,
                 initialIsRoutine: defaultRoutine, // This controls the form state
                 onSave: { values in
-                    // Handle saving the new task/routine
-                    guard let dateEntity = taskControllers.currentDateEntity else { return }
-                    
                     // Extract values from the form
                     let title = values["title"] as? String ?? (defaultRoutine ? "New Routine" : "New Task")
                     let points = values["points"] as? NSDecimalNumber ?? 
@@ -207,7 +249,13 @@ struct MainView: View {
                     let max = values["max"] as? Int16 ?? 3
                     // Use the form's actual isRoutine value, with defaultRoutine as fallback
                     let isRoutine = values["routine"] as? Bool ?? defaultRoutine
-                    let isOptional = values["optional"] as? Bool ?? true // Always default to optional=true
+                    let isOptional = values["optional"] as? Bool ?? true
+                    
+                    // Determine if this is a template task (based on the selected tab)
+                    let isTemplate = selectedTab == 2
+                    
+                    // Only use date entity for non-template tasks
+                    let dateEntity = isTemplate ? nil : taskControllers.currentDateEntity
                     
                     // Create the task using task manager
                     let newTask = taskControllers.taskManager?.createTask(
@@ -218,7 +266,8 @@ struct MainView: View {
                         reward: reward,
                         max: max,
                         routine: isRoutine,
-                        optional: isOptional
+                        optional: isOptional,
+                        template: isTemplate
                     )
                     
                     // Notify that the task list has changed

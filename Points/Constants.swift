@@ -11,6 +11,7 @@ struct Constants {
     struct Notifications {
         static let updatePointsDisplay = NSNotification.Name("UpdatePointsDisplay")
         static let taskListChanged = NSNotification.Name("TaskListChanged")
+        static let navigateToToday = NSNotification.Name("NavigateToToday")
     }
     
     // Theme colors are now defined in the AppTheme protocol

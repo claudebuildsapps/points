@@ -45,10 +45,59 @@ class TaskManager {
         }
     }
     
+    // Fetch all template tasks (tasks with no date or explicit template flag)
+    func fetchTemplateTasks() -> [CoreDataTask] {
+        let fetchRequest = createTaskFetchRequest(sortedBy: "position")
+        fetchRequest.predicate = NSPredicate(format: "template == YES OR date == nil")
+        
+        do {
+            let results = try context.fetch(fetchRequest)
+            print("TaskManager.fetchTemplateTasks(): Found \(results.count) templates")
+            return results
+        } catch {
+            print("Failed to fetch template tasks: \(error)")
+            return []
+        }
+    }
+    
+    // Fetch template tasks filtered by type
+    func fetchTemplateTasks(routinesOnly: Bool) -> [CoreDataTask] {
+        let fetchRequest = createTaskFetchRequest(sortedBy: "position")
+        fetchRequest.predicate = NSPredicate(
+            format: "(template == YES OR date == nil) AND routine == %@", 
+            NSNumber(value: routinesOnly)
+        )
+        
+        do {
+            return try context.fetch(fetchRequest)
+        } catch {
+            print("Failed to fetch filtered template tasks: \(error)")
+            return []
+        }
+    }
+    
+    // Apply template tasks to a specific date
+    func applyTemplatesToDate(_ dateEntity: CoreDataDate) {
+        let templates = fetchTemplateTasks()
+        
+        for template in templates {
+            // Create an instance from the template
+            let _ = template.createInstanceForDate(dateEntity, context: context)
+        }
+        
+        saveContext()
+    }
+    
     // Helper to create consistent fetch request
     private func createTaskFetchRequest(sortedBy key: String) -> NSFetchRequest<CoreDataTask> {
         let fetchRequest: NSFetchRequest<CoreDataTask> = CoreDataTask.fetchRequest()
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: key, ascending: true)]
+        
+        // Sort first by critical (descending to put critical first), then by the specified key
+        fetchRequest.sortDescriptors = [
+            NSSortDescriptor(key: "critical", ascending: false),
+            NSSortDescriptor(key: key, ascending: true)
+        ]
+        
         return fetchRequest
     }
     
@@ -60,7 +109,8 @@ class TaskManager {
         reward: NSDecimalNumber = NSDecimalNumber(value: 0),
         max: Int16? = nil,
         routine: Bool = false,
-        optional: Bool = false
+        optional: Bool = false,
+        template: Bool = false
     ) -> CoreDataTask {
         let task = CoreDataTask(context: context)
         
@@ -73,10 +123,20 @@ class TaskManager {
         task.position = Int16(fetchTasks().count)
         task.routine = routine
         task.optional = optional
+        task.critical = false // Default to non-critical
         task.reward = reward
+        task.template = template
         
-        // Associate with date
-        task.date = date ?? dateHelper.getTodayEntity() ?? createFallbackDateEntity()
+        // Associate with date (only if not a template)
+        if !template {
+            task.date = date ?? dateHelper.getTodayEntity() ?? createFallbackDateEntity()
+        }
+        
+        // Always set the template flag explicitly
+        task.template = template
+        
+        // Debug info
+        print("TaskManager: Created \(template ? "template" : "normal") task: \(task.title ?? "nil"), date=\(task.date != nil ? "set" : "nil")")
         
         saveContext()
         return task
@@ -115,6 +175,34 @@ class TaskManager {
         updateDatePoints(for: dateEntity)
     }
     
+    // Copy a task as a template
+    func copyTaskAsTemplate(_ task: CoreDataTask) -> CoreDataTask {
+        let template = CoreDataTask(context: context)
+        
+        // Copy all task properties except completion
+        template.title = task.title
+        template.points = task.points
+        template.target = task.target
+        template.max = task.max
+        template.completed = 0 // Reset completion for templates
+        template.position = Int16(fetchTemplateTasks().count) // Position at end of templates
+        template.routine = task.routine
+        template.optional = task.optional
+        template.reward = task.reward
+        template.template = true // Mark explicitly as a template
+        template.date = nil // Templates have no date
+        
+        saveContext()
+        
+        // Notify that the task list has changed
+        NotificationCenter.default.post(
+            name: Constants.Notifications.taskListChanged,
+            object: nil
+        )
+        
+        return template
+    }
+    
     // Create duplicate of a task
     func duplicateTask(_ task: CoreDataTask) -> CoreDataTask {
         let newTask = CoreDataTask(context: context)
@@ -127,6 +215,9 @@ class TaskManager {
         newTask.completed = 0
         newTask.position = Int16(fetchTasks().count)
         newTask.routine = task.routine
+        newTask.critical = task.critical // Copy the critical status
+        newTask.optional = task.optional
+        newTask.reward = task.reward
         newTask.date = task.date
         
         saveContext()
@@ -143,6 +234,7 @@ class TaskManager {
         if let reward = values["reward"] as? NSDecimalNumber { task.reward = reward }
         if let routine = values["routine"] as? Bool { task.routine = routine }
         if let optional = values["optional"] as? Bool { task.optional = optional }
+        if let critical = values["critical"] as? Bool { task.critical = critical }
         
         saveContext()
         updateDatePoints(for: task.date)
@@ -161,6 +253,19 @@ class TaskManager {
         // Reset points
         date.points = NSDecimalNumber(value: 0.0)
         saveContext()
+        
+        // Ensure progress is updated
+        NotificationCenter.default.post(
+            name: Constants.Notifications.updatePointsDisplay,
+            object: nil,
+            userInfo: ["points": 0]
+        )
+        
+        // Notify that the task list has changed for UI updates
+        NotificationCenter.default.post(
+            name: Constants.Notifications.taskListChanged,
+            object: nil
+        )
     }
     
     // Reset task completion counts

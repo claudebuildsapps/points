@@ -26,8 +26,8 @@ struct CustomNumericKeyboard: View {
             // Top bar with value display only (no clear button)
             HStack {
                 Spacer()
-                // Value display
-                Text(text.isEmpty ? "0" : text)
+                // Value display - format as integer even for decimal fields
+                Text(formatDisplayValue(text))
                     .font(.system(size: 26, weight: .semibold))
                     .padding()
                     .frame(alignment: .trailing)
@@ -142,6 +142,22 @@ struct CustomNumericKeyboard: View {
                 text += key
             }
         }
+    }
+    
+    // Helper to format display value - show as integer even if decimal
+    private func formatDisplayValue(_ value: String) -> String {
+        if value.isEmpty {
+            return "0"
+        }
+        
+        // For decimal values, try to convert to integer for display
+        if isDecimal && value.contains(".") {
+            if let doubleValue = Double(value) {
+                return "\(Int(doubleValue))"
+            }
+        }
+        
+        return value
     }
 }
 

@@ -40,6 +40,8 @@ struct FooterDisplayView: View {
     // Closures to handle button actions
     var onRoutineButtonTapped: () -> Void = {} // Specifically for the purple + button
     var onTaskButtonTapped: () -> Void = {}    // Specifically for the blue + button
+    var onHomeButtonTapped: () -> Void = {}    // For the home/today button
+    var onHelpButtonTapped: () -> Void = {}    // For the help/delete all button
     var onClearButtonTapped: () -> Void = {}
     var onSoftResetButtonTapped: () -> Void = {}
     var onCreateNewTaskInEditMode: () -> Void = {}
@@ -52,6 +54,8 @@ struct FooterDisplayView: View {
         taskFilter: Binding<TaskFilter>,
         onRoutineButtonTapped: @escaping () -> Void = {},
         onTaskButtonTapped: @escaping () -> Void = {},
+        onHomeButtonTapped: @escaping () -> Void = {},
+        onHelpButtonTapped: @escaping () -> Void = {},
         onClearButtonTapped: @escaping () -> Void = {},
         onSoftResetButtonTapped: @escaping () -> Void = {},
         onCreateNewTaskInEditMode: @escaping () -> Void = {},
@@ -62,6 +66,8 @@ struct FooterDisplayView: View {
         self._taskFilter = taskFilter
         self.onRoutineButtonTapped = onRoutineButtonTapped
         self.onTaskButtonTapped = onTaskButtonTapped
+        self.onHomeButtonTapped = onHomeButtonTapped
+        self.onHelpButtonTapped = onHelpButtonTapped
         self.onClearButtonTapped = onClearButtonTapped
         self.onSoftResetButtonTapped = onSoftResetButtonTapped
         self.onCreateNewTaskInEditMode = onCreateNewTaskInEditMode
@@ -79,44 +85,40 @@ struct FooterDisplayView: View {
                 // Blue + button - ALWAYS creates a Task
                 tabButton(icon: "plus", color: theme.tasksTab, action: onTaskButtonTapped)
                 
-                // Enhanced Points display
+                // Home button in the center, positioned higher
                 HStack {
                     Spacer()
-                    ZStack {
-                        // Outer glow effect - 20% bigger
-                        Circle()
-                            .fill(theme.templateTab)
-                            .frame(width: 50, height: 50) // Increased from 42
-                            .shadow(color: theme.templateTab.opacity(0.6), radius: 10, x: 0, y: 0)
-                        
-                        // Points display with animation - larger text
-                        VStack(spacing: 0) {
-                            Text("\(pointsObserver.points)")
-                                .font(.system(size: 22, weight: .bold)) // Increased from 18
-                                .foregroundColor(theme.textInverted)
-                                .fixedSize() // Prevent layout issues causing dots
-                                .minimumScaleFactor(0.8) // Allow some scaling if needed
-                                .scaleEffect(isAnimating ? 1.2 : 1.0)
-                            
-                            Text("pts")
-                                .font(.system(size: 10, weight: .medium)) // Increased from 8
-                                .foregroundColor(theme.textInverted.opacity(0.8))
-                                .offset(y: -2)
+                    VStack {
+                        // Added a VStack to control vertical position
+                        Button(action: onHomeButtonTapped) {
+                            ZStack {
+                                // Background circle with summary tab color
+                                Circle()
+                                    .fill(theme.summaryTab)
+                                    .frame(width: 50, height: 50)
+                                    .shadow(color: theme.summaryTab.opacity(0.6), radius: 10, x: 0, y: 0)
+                                
+                                // Home icon in white
+                                Image(systemName: "house.fill")
+                                    .font(.system(size: 22, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
                         }
-                        .padding(.top, 2)
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Add more space to position the button higher
+                        Spacer().frame(height: 14)
                     }
-                    .scaleEffect(isAnimating ? 1.1 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isAnimating)
                     Spacer()
                 }
                 .frame(width: UIScreen.main.bounds.width/5)
                 
-                // Help button
+                // Help/Delete button
                 tabButton(
-                    icon: "?", 
-                    isText: true, 
+                    icon: "xmark.bin", 
+                    isText: false, 
                     color: theme.summaryTab, 
-                    action: {}
+                    action: onHelpButtonTapped
                 )
                 
                 // Theme toggle button

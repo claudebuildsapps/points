@@ -27,10 +27,13 @@ struct TaskFormView: View {
     @State private var max: String
     @State private var isRoutine: Bool
     @State private var isOptional: Bool
+    @State private var isCritical: Bool
     
     // UI state
     @State private var activeField: TaskFormFieldType? = nil
     @State private var showDeleteConfirmation: Bool = false
+    @State private var showTemplateConfirmation: Bool = false
+    @State private var isDuplicateTemplate: Bool = false
     @FocusState private var focusedField: TaskFormFieldType?
     
     // Environment
@@ -41,6 +44,10 @@ struct TaskFormView: View {
     var onSave: ([String: Any]) -> Void
     var onCancel: () -> Void
     var onDelete: (() -> Void)?
+    var onCopyToTemplate: (() -> Void)?
+    
+    // Environment context for template check
+    @Environment(\.managedObjectContext) private var context
     
     // MARK: - Initialization
     init(
@@ -50,7 +57,8 @@ struct TaskFormView: View {
         initialIsRoutine: Bool? = nil,
         onSave: @escaping ([String: Any]) -> Void,
         onCancel: @escaping () -> Void,
-        onDelete: (() -> Void)? = nil
+        onDelete: (() -> Void)? = nil,
+        onCopyToTemplate: (() -> Void)? = nil
     ) {
         self.mode = mode
         self.task = task
@@ -58,31 +66,36 @@ struct TaskFormView: View {
         self.onSave = onSave
         self.onCancel = onCancel
         self.onDelete = onDelete
+        self.onCopyToTemplate = onCopyToTemplate
         
         // Initialize defaults based on mode and parameters
         if mode == .edit, let task = task {
-            // Edit mode - use task values
+            // Edit mode - use task values with integer formatting for decimals
             self._title = State(initialValue: task.title ?? "")
-            self._points = State(initialValue: task.points?.stringValue ?? "5.0")
+            self._points = State(initialValue: "\(Int(task.points?.doubleValue ?? 5.0))")
             self._target = State(initialValue: "\(task.target > 0 ? task.target : 3)")
-            self._reward = State(initialValue: task.reward?.stringValue ?? "2.0")
+            self._reward = State(initialValue: "\(Int(task.reward?.doubleValue ?? 2.0))")
             self._max = State(initialValue: "\(Swift.max(task.max, task.target > 0 ? task.target : 3))")
             self._isRoutine = State(initialValue: task.routine)
             self._isOptional = State(initialValue: task.optional)
+            // Default critical to false if not set (for backward compatibility)
+            self._isCritical = State(initialValue: task.critical)
         } else {
             // Create mode - use defaults or provided initial values
             // IMPORTANT: respecting the initialIsRoutine flag from the button pressed
             let useRoutine = initialIsRoutine ?? false // Default to routine=false if not specified
             
             self._title = State(initialValue: "")
-            self._points = State(initialValue: useRoutine ? "3.0" : "5.0")
+            self._points = State(initialValue: useRoutine ? "3" : "5")
             self._target = State(initialValue: "3")
-            self._reward = State(initialValue: useRoutine ? "1.0" : "0.0")
+            self._reward = State(initialValue: useRoutine ? "1" : "0")
             self._max = State(initialValue: "3")
             // CRITICAL: Always set isRoutine based on initialIsRoutine parameter
             self._isRoutine = State(initialValue: useRoutine)
             // Always set optional to true for both routines and tasks
             self._isOptional = State(initialValue: true)
+            // Default critical to false for new tasks/routines
+            self._isCritical = State(initialValue: false)
         }
     }
     
@@ -100,17 +113,32 @@ struct TaskFormView: View {
                 
                 Spacer()
                 
-                // Delete button - only show in edit mode
-                if mode == .edit && onDelete != nil {
-                    Button(action: {
-                        showDeleteConfirmation = true
-                    }) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 18))
-                            .foregroundColor(.red)
+                // Buttons container for alignment
+                HStack(spacing: 12) {
+                    // Copy to Template button - only show in edit mode for non-template tasks
+                    if mode == .edit && onCopyToTemplate != nil && task != nil && !task!.template && task!.date != nil {
+                        Button(action: {
+                            checkForDuplicateTemplate()
+                        }) {
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 18))
+                                .foregroundColor(isDuplicateTemplate ? .gray : theme.templateTab)
+                        }
+                        .disabled(isDuplicateTemplate)
                     }
-                    .padding(.trailing, 16)
+                    
+                    // Delete button - only show in edit mode
+                    if mode == .edit && onDelete != nil {
+                        Button(action: {
+                            showDeleteConfirmation = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 18))
+                                .foregroundColor(.red)
+                        }
+                    }
                 }
+                .padding(.trailing, 16)
             }
             .padding(.vertical, 16)
             .background(Color(.systemBackground))
@@ -125,23 +153,33 @@ struct TaskFormView: View {
                             .foregroundColor(.gray)
                         
                         // Native text field for title input
-                        TextField(isRoutine ? "Routine name..." : "Task name...", text: $title)
-                            .padding(12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(Color.gray.opacity(0.5), lineWidth: 1)
-                            )
-                            .foregroundColor(.primary)
-                            .frame(height: 44)
-                            // Use SwiftUI's focus system
-                            .focused($focusedField, equals: .title)
-                            // Clear custom keyboard when native keyboard is shown
-                            .onChange(of: focusedField) { newValue in
-                                if newValue == .title {
-                                    // Using native keyboard, clear custom keyboard state
+                        ZStack {
+                            TextField(isRoutine ? "Routine name..." : "Task name...", text: $title)
+                                .padding(12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color.gray.opacity(0.5), lineWidth: 1)
+                                )
+                                .foregroundColor(.primary)
+                                .frame(height: 44)
+                                // Use SwiftUI's focus system
+                                .focused($focusedField, equals: .title)
+                                // Clear custom keyboard when native keyboard is shown
+                                .onChange(of: focusedField) { newValue in
+                                    if newValue == .title {
+                                        // Using native keyboard, clear custom keyboard state
+                                        activeField = nil
+                                    }
+                                }
+                            
+                            // Add a transparent tap area to ensure focus and improve responsiveness
+                            Color.clear
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    focusedField = .title
                                     activeField = nil
                                 }
-                            }
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
@@ -205,6 +243,13 @@ struct TaskFormView: View {
                                 .foregroundColor(.primary)
                         }
                         .toggleStyle(SwitchToggleStyle(tint: .blue))
+                        
+                        Toggle(isOn: $isCritical) {
+                            Text("Critical")
+                                .font(.system(size: 16))
+                                .foregroundColor(.primary)
+                        }
+                        .toggleStyle(SwitchToggleStyle(tint: .orange))
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
@@ -284,22 +329,63 @@ struct TaskFormView: View {
             }
         }
         // Add delete confirmation dialog
-        .alert(isPresented: $showDeleteConfirmation) {
-            Alert(
-                title: Text("Delete Task"),
-                message: Text("Are you sure you want to delete this task? This action cannot be undone."),
-                primaryButton: .destructive(Text("Delete")) {
-                    if let onDelete = onDelete {
-                        onDelete()
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                },
-                secondaryButton: .cancel()
-            )
+        .alert("Delete Task", isPresented: $showDeleteConfirmation) {
+            Button("Delete", role: .destructive) {
+                if let onDelete = onDelete {
+                    onDelete()
+                    presentationMode.wrappedValue.dismiss()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to delete this task? This action cannot be undone.")
+        }
+        
+        // Add template confirmation dialog
+        .alert(isRoutine ? "Copy Routine as Template" : "Copy Task as Template", isPresented: $showTemplateConfirmation) {
+            Button("Copy", role: .none) {
+                if let onCopyToTemplate = onCopyToTemplate {
+                    onCopyToTemplate()
+                    presentationMode.wrappedValue.dismiss()
+                }
+            }
+            .foregroundColor(.green)
+            
+            Button("Cancel", role: .cancel) {}
+                .foregroundColor(.red)
+        } message: {
+            Text("This will copy this \(isRoutine ? "Routine" : "Task") as a template for use on future dates.")
         }
     }
     
     // MARK: - Helper Methods
+    
+    // Check if template with same title already exists
+    private func checkForDuplicateTemplate() {
+        guard let title = task?.title, !title.isEmpty else { return }
+        
+        let fetchRequest: NSFetchRequest<CoreDataTask> = CoreDataTask.fetchRequest()
+        fetchRequest.predicate = NSPredicate(format: "(template == YES OR date == nil) AND title == %@", title)
+        fetchRequest.fetchLimit = 1
+        
+        do {
+            let existingTemplates = try context.fetch(fetchRequest)
+            isDuplicateTemplate = !existingTemplates.isEmpty
+            
+            if isDuplicateTemplate {
+                // Show message that template already exists
+                print("Template with name '\(title)' already exists")
+            } else {
+                // Proceed with template creation confirmation
+                showTemplateConfirmation = true
+            }
+        } catch {
+            print("Error checking for duplicate template: \(error)")
+            // In case of error, allow creation
+            isDuplicateTemplate = false
+            showTemplateConfirmation = true
+        }
+    }
     
     // Helper to get the binding for the active field
     func binding(for field: TaskFormFieldType) -> Binding<String> {
@@ -352,14 +438,34 @@ struct TaskFormView: View {
             maxValue = targetValue
         }
         
+        // For points and reward, ensure proper decimal values even if displayed as integers
+        let pointsValue: NSDecimalNumber
+        if points.isEmpty {
+            pointsValue = NSDecimalNumber(value: 3.0)
+        } else if let pointsDouble = Double(points) {
+            pointsValue = NSDecimalNumber(value: pointsDouble)
+        } else {
+            pointsValue = NSDecimalNumber(value: 3.0)
+        }
+        
+        let rewardValue: NSDecimalNumber
+        if reward.isEmpty {
+            rewardValue = NSDecimalNumber(value: isRoutine ? 1.0 : 0.0)
+        } else if let rewardDouble = Double(reward) {
+            rewardValue = NSDecimalNumber(value: rewardDouble)
+        } else {
+            rewardValue = NSDecimalNumber(value: isRoutine ? 1.0 : 0.0)
+        }
+        
         return [
             "title": title,
-            "points": NSDecimalNumber(string: points.isEmpty ? "3.0" : points),
+            "points": pointsValue,
             "target": targetValue,
-            "reward": NSDecimalNumber(string: reward.isEmpty ? "1.0" : reward),
+            "reward": rewardValue,
             "max": maxValue,
             "routine": isRoutine,
-            "optional": isOptional
+            "optional": isOptional,
+            "critical": isCritical
         ]
     }
 }

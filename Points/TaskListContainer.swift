@@ -89,6 +89,9 @@ struct TaskListContainer: View {
                 onDuplicate: { task in
                     duplicateTask(task)
                 },
+                onCopyToTemplate: { task in
+                    copyTaskAsTemplate(task)
+                },
                 onSaveEdit: { task, updatedValues in
                     saveTaskEdit(task: task, updatedValues: updatedValues)
                 },
@@ -205,6 +208,15 @@ struct TaskListContainer: View {
     private func duplicateTask(_ task: CoreDataTask) {
         taskManager.duplicateTask(task)
         loadTasks() // Reload tasks after modification
+    }
+    
+    private func copyTaskAsTemplate(_ task: CoreDataTask) {
+        taskManager.copyTaskAsTemplate(task)
+        // Show a notification that the template was created
+        NotificationCenter.default.post(
+            name: Constants.Notifications.taskListChanged,
+            object: nil
+        )
     }
     
     private func saveTaskEdit(task: CoreDataTask, updatedValues: [String: Any]) {

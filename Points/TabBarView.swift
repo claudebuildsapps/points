@@ -3,7 +3,7 @@ import SwiftUI
 struct TabBarView: View {
     // MARK: - Properties
     private let tabCount: Int = 5
-    private let fixedTabTitles = ["Routines", "Tasks", "Template", "Summary", "Data"]
+    private let fixedTabTitles = ["Routines", "Tasks", "Templates", "Summary", "Data"]
     @Environment(\.theme) private var theme
     
     // Current selected tab index

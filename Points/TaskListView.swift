@@ -9,6 +9,7 @@ struct TaskListView: View {
     var onDecrement: (CoreDataTask) -> Void
     var onDelete: (CoreDataTask) -> Void
     var onDuplicate: (CoreDataTask) -> Void
+    var onCopyToTemplate: ((CoreDataTask) -> Void)?
     var onSaveEdit: (CoreDataTask, [String: Any]) -> Void
     var onCancelEdit: () -> Void
     var onIncrement: (CoreDataTask) -> Void
@@ -35,6 +36,9 @@ struct TaskListView: View {
                         onDuplicate: {
                             onDuplicate(task)
                         },
+                        onCopyToTemplate: onCopyToTemplate != nil ? {
+                            onCopyToTemplate?(task)
+                        } : nil,
                         onSaveEdit: { updatedValues in
                             onSaveEdit(task, updatedValues)
                         },

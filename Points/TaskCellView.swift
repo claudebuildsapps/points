@@ -14,6 +14,7 @@ struct TaskCellView: View {
     var onDecrement: () -> Void
     var onDelete: () -> Void
     var onDuplicate: () -> Void
+    var onCopyToTemplate: (() -> Void)?
     var onSaveEdit: ([String: Any]) -> Void
     var onCancelEdit: () -> Void
     var onIncrement: () -> Void
@@ -40,6 +41,21 @@ struct TaskCellView: View {
                 
                 // Content row
                 HStack(spacing: 0) { // No default spacing - we'll control spacing individually
+                    // Critical indicator (if task is critical)
+                    if task.critical {
+                        ZStack {
+                            Circle()
+                                .fill(theme.criticalColor)
+                                .frame(width: 24, height: 24)
+                                .shadow(color: theme.criticalColor.opacity(0.6), radius: 2, x: 0, y: 1)
+                            
+                            Image(systemName: "exclamationmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.leading, 8)
+                    }
+                    
                     // Action buttons
                     HStack(spacing: 10) { // Increased spacing between points display and edit button
                         // Eye-catching points indicator with badge-like design
@@ -200,7 +216,12 @@ struct TaskCellView: View {
                     onDelete()
                     isExpanded = false
                     isEditMode = false
-                }
+                },
+                onCopyToTemplate: onCopyToTemplate != nil ? {
+                    onCopyToTemplate?()
+                    isExpanded = false
+                    isEditMode = false
+                } : nil
             )
             .padding(.top, 20)
         }

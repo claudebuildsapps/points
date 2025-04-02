@@ -7,39 +7,14 @@ struct DateNavigationView: View {
     @State private var currentDate: Date = Date()
     let onDateChange: (CoreDataDate) -> Void
     
+    // Notification token for navigation to today
+    @State private var notificationToken: NSObjectProtocol?
+    
     // Use a computed property for DateHelper to ensure it uses the current context
     private var dateHelper: DateHelper { DateHelper(context: context) }
     
     var body: some View {
         HStack {
-            // App logo/home button
-            Button(action: {
-                // Reset to today's date when tapped
-                currentDate = Date()
-            }) {
-                ZStack {
-                    // Circle background with gold color
-                    Circle()
-                        .fill(theme.templateTab) // Gold color for logo background
-                        .frame(width: 38, height: 38)
-                        .shadow(color: theme.templateTab.opacity(0.4), radius: 2, x: 0, y: 1)
-                    
-                    // P for "Points" app
-                    Text("P")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                        .offset(y: -1) // Center visually
-                    
-                    // Small dot to represent a point
-                    Circle()
-                        .fill(Color.white)
-                        .frame(width: 6, height: 6)
-                        .offset(x: 8, y: 8) // Position in bottom right
-                }
-            }
-            .buttonStyle(PlainButtonStyle())
-            .padding(.trailing, 4)
-            
             // Left arrow button
             navigationButton(direction: .backward)
             
@@ -54,7 +29,24 @@ struct DateNavigationView: View {
             navigationButton(direction: .forward)
         }
         .padding(.horizontal)
-        .onAppear(perform: updateDateEntity)
+        .onAppear {
+            updateDateEntity()
+            
+            // Set up notification observer for navigating to today
+            notificationToken = NotificationCenter.default.addObserver(
+                forName: Constants.Notifications.navigateToToday,
+                object: nil,
+                queue: .main
+            ) { _ in
+                navigateToToday()
+            }
+        }
+        .onDisappear {
+            // Clean up notification observer
+            if let token = notificationToken {
+                NotificationCenter.default.removeObserver(token)
+            }
+        }
         .onChange(of: currentDate) { _ in updateDateEntity() }
     }
     
@@ -116,6 +108,13 @@ struct DateNavigationView: View {
                 onDateChange(dateEntity)
             }
             dateHelper.ensureTasksExist(for: dateEntity)
+        }
+    }
+    
+    // Navigate to today's date with animation
+    private func navigateToToday() {
+        withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
+            currentDate = Date().startOfDay
         }
     }
     
