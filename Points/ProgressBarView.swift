@@ -24,19 +24,29 @@ struct ProgressBarView: View {
             // Full-width rectangular progress bar with target indicator
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    // Calculate target position - use a safer position
+                    // Calculate positions and values
                     let targetRatio = CGFloat(dailyTarget) / 150.0
                     let targetPosition = min(geometry.size.width * 0.75, geometry.size.width * targetRatio)
+                    let progressWidth = geometry.size.width * CGFloat(progress)
+                    let isOverTarget = progressWidth > targetPosition
+                    
+                    // Calculate estimated points
+                    let targetRatioFloat = Float(dailyTarget) / 150.0
+                    let estimatedPoints: Int = calculateEstimatedPoints(
+                        progress: progress,
+                        targetRatioFloat: targetRatioFloat,
+                        dailyTarget: dailyTarget
+                    )
+                    
+                    // Determine indicator position and color
+                    let indicatorPosition = min(progressWidth, geometry.size.width - 24) // Prevent overflow
+                    let indicatorColor: Color = isOverTarget ? theme.dataTab : theme.templateTab
                     
                     // Background - full width rectangle with minimal rounding
                     Rectangle()
                         .fill(theme.progressBackground)
                         .cornerRadius(2)
                         .frame(width: geometry.size.width, height: geometry.size.height)
-                    
-                    // Calculate if we're over target
-                    let progressWidth = geometry.size.width * CGFloat(progress)
-                    let isOverTarget = progressWidth > targetPosition
                     
                     Group {
                         // Progress fill up to target - gold color
@@ -94,6 +104,34 @@ struct ProgressBarView: View {
                         .offset(y: -24) // Position higher above progress bar
                     }
                     .position(x: targetPosition, y: geometry.size.height / 2)
+                    
+                    // Current points indicator
+                    if estimatedPoints > 0 {
+                        ZStack {
+                            // Points decoration line
+                            Rectangle()
+                                .fill(indicatorColor)
+                                .frame(width: 3, height: geometry.size.height + 10)
+                            
+                            // Current points bubble
+                            ZStack {
+                                // Background pill
+                                Capsule()
+                                    .fill(indicatorColor)
+                                    .frame(width: estimatedPoints > 999 ? 60 : 48, height: 24)
+                                    .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
+                                
+                                // Points value
+                                Text("\(estimatedPoints)")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .minimumScaleFactor(0.8)
+                            }
+                            .offset(y: -24)
+                        }
+                        .position(x: indicatorPosition, y: geometry.size.height / 2)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: indicatorPosition)
+                    }
                 }
             }
             .frame(height: 24) // Maintain taller progress bar
@@ -195,6 +233,19 @@ struct ProgressBarView: View {
             }
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
+        }
+    }
+    
+    // Calculate points based on progress and target
+    private func calculateEstimatedPoints(progress: Float, targetRatioFloat: Float, dailyTarget: Int) -> Int {
+        if progress <= targetRatioFloat {
+            // Before target: calculate as portion of target (scales linearly to target)
+            return Int((progress / targetRatioFloat) * Float(dailyTarget))
+        } else {
+            // Beyond target: start with target and add overflow
+            let overProgress = progress - targetRatioFloat
+            let overPoints = Int(overProgress * 150.0)
+            return dailyTarget + overPoints
         }
     }
     

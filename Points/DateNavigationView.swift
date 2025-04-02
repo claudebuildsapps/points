@@ -12,6 +12,34 @@ struct DateNavigationView: View {
     
     var body: some View {
         HStack {
+            // App logo/home button
+            Button(action: {
+                // Reset to today's date when tapped
+                currentDate = Date()
+            }) {
+                ZStack {
+                    // Circle background with gold color
+                    Circle()
+                        .fill(theme.templateTab) // Gold color for logo background
+                        .frame(width: 38, height: 38)
+                        .shadow(color: theme.templateTab.opacity(0.4), radius: 2, x: 0, y: 1)
+                    
+                    // P for "Points" app
+                    Text("P")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.white)
+                        .offset(y: -1) // Center visually
+                    
+                    // Small dot to represent a point
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 6, height: 6)
+                        .offset(x: 8, y: 8) // Position in bottom right
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.trailing, 4)
+            
             // Left arrow button
             navigationButton(direction: .backward)
             

@@ -8,6 +8,7 @@ struct TaskCellView: View {
     @State private var isExpanded = false
     @State private var isEditMode = false
     @State private var flashBackground = false
+    @State private var isSwipeInProgress = false
 
     // Callback closures
     var onDecrement: () -> Void
@@ -19,9 +20,12 @@ struct TaskCellView: View {
 
     var body: some View {
         Button(action: {
-            let previousCompleted = Int(task.completed)
-            onIncrement()
-            animateCompletionChange(from: previousCompleted)
+            // Only increment if not currently swiping
+            if !isSwipeInProgress {
+                let previousCompleted = Int(task.completed)
+                onIncrement()
+                animateCompletionChange(from: previousCompleted)
+            }
         }) {
             ZStack {
                 // Background with completion state color
@@ -35,9 +39,9 @@ struct TaskCellView: View {
                 }
                 
                 // Content row
-                HStack(spacing: 8) {
+                HStack(spacing: 0) { // No default spacing - we'll control spacing individually
                     // Action buttons
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) { // Increased spacing between points display and edit button
                         // Eye-catching points indicator with badge-like design
                         VStack(spacing: -2) {
                             ZStack {
@@ -88,23 +92,7 @@ struct TaskCellView: View {
                         .frame(width: 40)
                         .contentShape(Rectangle())
                         .onTapGesture(perform: toggleEditMode)
-
-                        // Undo button
-                        Button(action: {
-                            // Only perform action if there are completions to undo
-                            if Int(task.completed) > 0 {
-                                handleDecrement()
-                            }
-                            // Otherwise, do nothing when pressed
-                        }) {
-                            Image(systemName: "arrow.uturn.backward")
-                                .themeCircleButton(color: theme.dataTab, textColor: theme.textInverted)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .frame(width: 40)
-                        .contentShape(Rectangle())
-                        // Remove separate onTapGesture since we're handling it in the Button action
-                        .opacity(Int(task.completed) > 0 ? 1.0 : 0.5)
+                        .padding(.trailing, 2) // Small padding between edit button and title
                     }
 
                     // Task title only (removed date)
@@ -116,9 +104,10 @@ struct TaskCellView: View {
                             .truncationMode(.tail)
                             .padding(.vertical, 4) // Add vertical padding to center text
                     }
+                    .padding(.leading, 5) // Added padding to offset from edit button
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                    // Enhanced slider-style completion tracker (back to oval shape)
+                    // Enhanced slider-style completion tracker with swipe gesture
                     ZStack(alignment: .leading) {
                         // Track background - oval shape
                         Capsule()
@@ -156,6 +145,31 @@ struct TaskCellView: View {
                         .animation(.spring(response: 0.4, dampingFraction: 0.7), value: Int(task.completed))
                     }
                     .frame(width: 80, height: 32) // Maintain increased overall size
+                    .contentShape(Rectangle()) // Make entire area tappable
+                    .gesture(
+                        // Add swipe left gesture for decrement
+                        DragGesture(minimumDistance: 10, coordinateSpace: .local)
+                            .onChanged { _ in 
+                                // Set flag when drag starts
+                                isSwipeInProgress = true
+                            }
+                            .onEnded { value in
+                                // Only handle left swipes
+                                if value.translation.width < -10 && value.translation.height > -30 && value.translation.height < 30 {
+                                    // Check if there are completions to decrement
+                                    if Int(task.completed) > 0 {
+                                        let previousCompleted = Int(task.completed)
+                                        onDecrement()
+                                        animateCompletionChange(from: previousCompleted)
+                                    }
+                                }
+                                // Reset flag after gesture completes
+                                // Adding slight delay to prevent the tap from registering
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    isSwipeInProgress = false
+                                }
+                            }
+                    )
                 }
                 .padding(.vertical, 12)
                 .padding(.horizontal, 8)
