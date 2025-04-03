@@ -105,9 +105,6 @@ class DateHelper {
                 let templateCount = applyTemplatesIfExist(for: dateEntity)
                 
                 // If no templates exist, create default tasks
-                if templateCount == 0 {
-                    createFallbackTasks(for: dateEntity)
-                }
             }
         } catch {
             print("Error checking for tasks: \(error)")
@@ -156,37 +153,4 @@ class DateHelper {
     }
     
     // Create default fallback tasks when no templates exist
-    private func createFallbackTasks(for dateEntity: CoreDataDate) {
-        // First task - Meditate
-        let task1 = CoreDataTask(context: context)
-        task1.title = "Meditate"
-        task1.points = NSDecimalNumber(value: Constants.Defaults.taskPoints)
-        task1.target = Int16(Constants.Defaults.taskTarget)
-        task1.completed = 0
-        task1.date = dateEntity
-        task1.position = 0
-        task1.max = Int16(Constants.Defaults.taskMax)
-        
-        // Second task - Shower
-        let task2 = CoreDataTask(context: context)
-        task2.title = "Shower"
-        task2.points = NSDecimalNumber(value: Constants.Defaults.taskPoints * 0.8)
-        task2.target = 1
-        task2.completed = 0
-        task2.date = dateEntity
-        task2.position = 1
-        task2.max = Int16(Constants.Defaults.taskMax)
-        
-        // Third task - Exercise
-        let task3 = CoreDataTask(context: context)
-        task3.title = "Exercise"
-        task3.points = NSDecimalNumber(value: Constants.Defaults.taskPoints * 1.5)
-        task3.target = 1
-        task3.completed = 0
-        task3.date = dateEntity
-        task3.position = 2
-        task3.max = Int16(Constants.Defaults.taskMax)
-        
-        try? context.save()
-    }
 }

@@ -55,6 +55,7 @@ struct TaskFormView: View {
         task: CoreDataTask? = nil,
         isPresented: Binding<Bool>,
         initialIsRoutine: Bool? = nil,
+        initialIsCritical: Bool? = nil,
         onSave: @escaping ([String: Any]) -> Void,
         onCancel: @escaping () -> Void,
         onDelete: (() -> Void)? = nil,
@@ -84,6 +85,7 @@ struct TaskFormView: View {
             // Create mode - use defaults or provided initial values
             // IMPORTANT: respecting the initialIsRoutine flag from the button pressed
             let useRoutine = initialIsRoutine ?? false // Default to routine=false if not specified
+            let useCritical = initialIsCritical ?? false // Default to critical=false if not specified
             
             self._title = State(initialValue: "")
             self._points = State(initialValue: useRoutine ? "3" : "5")
@@ -94,8 +96,8 @@ struct TaskFormView: View {
             self._isRoutine = State(initialValue: useRoutine)
             // Always set optional to true for both routines and tasks
             self._isOptional = State(initialValue: true)
-            // Default critical to false for new tasks/routines
-            self._isCritical = State(initialValue: false)
+            // Set critical based on initialIsCritical parameter
+            self._isCritical = State(initialValue: useCritical)
         }
     }
     

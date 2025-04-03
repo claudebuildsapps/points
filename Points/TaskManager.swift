@@ -110,7 +110,8 @@ class TaskManager {
         max: Int16? = nil,
         routine: Bool = false,
         optional: Bool = false,
-        template: Bool = false
+        template: Bool = false,
+        critical: Bool = false
     ) -> CoreDataTask {
         let task = CoreDataTask(context: context)
         
@@ -123,7 +124,7 @@ class TaskManager {
         task.position = Int16(fetchTasks().count)
         task.routine = routine
         task.optional = optional
-        task.setCritical(false) // Default to non-critical
+        task.setCritical(critical) // Set critical flag based on parameter
         task.reward = reward
         task.template = template
         
@@ -357,5 +358,63 @@ class TaskManager {
     func createInitialTasksIfNeeded() {
         guard let today = dateHelper.getTodayEntity() else { return }
         dateHelper.ensureTasksExist(for: today)
+    }
+    
+    // Clear all data from the database
+    func clearAllData() {
+        // Delete any existing tasks and dates
+        let taskFetchRequest: NSFetchRequest<NSFetchRequestResult> = CoreDataTask.fetchRequest()
+        let dateFetchRequest: NSFetchRequest<NSFetchRequestResult> = CoreDataDate.fetchRequest()
+        let completionFetchRequest: NSFetchRequest<NSFetchRequestResult> = CoreDataTaskCompletion.fetchRequest()
+        
+        // Delete tasks first
+        let taskDeleteRequest = NSBatchDeleteRequest(fetchRequest: taskFetchRequest)
+        taskDeleteRequest.resultType = .resultTypeObjectIDs
+        
+        // Delete completions
+        let completionDeleteRequest = NSBatchDeleteRequest(fetchRequest: completionFetchRequest)
+        completionDeleteRequest.resultType = .resultTypeObjectIDs
+        
+        // Delete dates
+        let dateDeleteRequest = NSBatchDeleteRequest(fetchRequest: dateFetchRequest)
+        dateDeleteRequest.resultType = .resultTypeObjectIDs
+        
+        do {
+            // Execute delete requests and get result object IDs
+            let taskResult = try context.execute(taskDeleteRequest) as? NSBatchDeleteResult
+            let completionResult = try context.execute(completionDeleteRequest) as? NSBatchDeleteResult
+            let dateResult = try context.execute(dateDeleteRequest) as? NSBatchDeleteResult
+            
+            // Get deleted object IDs
+            let taskObjectIDs = taskResult?.result as? [NSManagedObjectID] ?? []
+            let completionObjectIDs = completionResult?.result as? [NSManagedObjectID] ?? []
+            let dateObjectIDs = dateResult?.result as? [NSManagedObjectID] ?? []
+            
+            // Update context with changes
+            NSManagedObjectContext.mergeChanges(
+                fromRemoteContextSave: [NSDeletedObjectsKey: taskObjectIDs],
+                into: [context]
+            )
+            NSManagedObjectContext.mergeChanges(
+                fromRemoteContextSave: [NSDeletedObjectsKey: completionObjectIDs],
+                into: [context]
+            )
+            NSManagedObjectContext.mergeChanges(
+                fromRemoteContextSave: [NSDeletedObjectsKey: dateObjectIDs],
+                into: [context]
+            )
+            
+            // Final save to ensure consistent state
+            saveContext()
+            print("Successfully cleared all database data")
+            
+            // Notify that data has changed
+            NotificationCenter.default.post(
+                name: Constants.Notifications.taskListChanged,
+                object: nil
+            )
+        } catch {
+            print("Error clearing all data: \(error)")
+        }
     }
 }

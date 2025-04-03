@@ -14,7 +14,7 @@ class TaskControllers: ObservableObject {
         taskManager = TaskManager(context: context)
     }
     
-    func addNewTask(isRoutine: Bool = false) {
+    func addNewTask(isRoutine: Bool = false, isCritical: Bool = false) {
         guard let taskManager = taskManager, let dateEntity = currentDateEntity else { return }
         taskManager.createTask(
             title: "New Task", 
@@ -23,7 +23,8 @@ class TaskControllers: ObservableObject {
             date: dateEntity,
             reward: NSDecimalNumber(value: isRoutine ? 1.0 : 0.0),
             routine: isRoutine,
-            optional: isRoutine
+            optional: isRoutine,
+            critical: isCritical
         )
     }
     
@@ -49,6 +50,11 @@ class TaskControllers: ObservableObject {
             object: nil, 
             userInfo: ["points": 0]
         )
+    }
+    
+    func clearAllData() {
+        guard let taskManager = taskManager else { return }
+        taskManager.clearAllData()
     }
 }
 
@@ -149,8 +155,11 @@ struct MainView: View {
                         )
                     },
                     onHelpButtonTapped: {
-                        // Only show delete confirmation when on main tab and there's a date entity
+                        // Show delete confirmation when on main tab or data explorer tab
                         if selectedTab == 0 && taskControllers.currentDateEntity != nil {
+                            showDeleteConfirmation = true
+                        } else if selectedTab == 4 {
+                            // For Data Explorer tab - always show delete confirmation
                             showDeleteConfirmation = true
                         }
                     },
@@ -200,31 +209,54 @@ struct MainView: View {
         }
         // Delete confirmation dialog
         .alert(isPresented: $showDeleteConfirmation) {
-            Alert(
-                title: Text("Delete All Tasks"),
-                message: Text("This will delete ALL tasks for the current date. This action cannot be undone."),
-                primaryButton: .destructive(Text("Delete")) {
-                    // Perform the delete action
-                    if selectedTab == 0 && taskControllers.currentDateEntity != nil {
-                        taskControllers.clearTasks()
-                        
-                        // Ensure progress bar is updated
-                        NotificationCenter.default.post(
-                            name: Constants.Notifications.taskListChanged,
-                            object: nil
-                        )
-                        
-                        // Force UI refresh
-                        withAnimation(.easeInOut) {
-                            // Reset filter to ensure listview updates
-                            if taskFilter != .all {
-                                taskFilter = .all
+            if selectedTab == 4 {
+                // Data Explorer tab - full database reset
+                return Alert(
+                    title: Text("Reset Entire Database"),
+                    message: Text("This will delete ALL tasks, routines, templates, and dates from the database. This action CANNOT be undone."),
+                    primaryButton: .destructive(Text("Reset Everything")) {
+                        // Perform the complete database reset
+                        // Call the method on taskManager directly
+                        if let taskManager = taskControllers.taskManager {
+                            taskManager.clearAllData()
+                            
+                            // Force refresh of any views that might be showing data
+                            NotificationCenter.default.post(
+                                name: Constants.Notifications.taskListChanged,
+                                object: nil
+                            )
+                        }
+                    },
+                    secondaryButton: .cancel(Text("Cancel"))
+                )
+            } else {
+                // Normal date tasks delete
+                return Alert(
+                    title: Text("Delete All Tasks"),
+                    message: Text("This will delete ALL tasks for the current date. This action cannot be undone."),
+                    primaryButton: .destructive(Text("Delete")) {
+                        // Perform the delete action
+                        if selectedTab == 0 && taskControllers.currentDateEntity != nil {
+                            taskControllers.clearTasks()
+                            
+                            // Ensure progress bar is updated
+                            NotificationCenter.default.post(
+                                name: Constants.Notifications.taskListChanged,
+                                object: nil
+                            )
+                            
+                            // Force UI refresh
+                            withAnimation(.easeInOut) {
+                                // Reset filter to ensure listview updates
+                                if taskFilter != .all {
+                                    taskFilter = .all
+                                }
                             }
                         }
-                    }
-                },
-                secondaryButton: .cancel(Text("Cancel"))
-            )
+                    },
+                    secondaryButton: .cancel(Text("Cancel"))
+                )
+            }
         }
         // Task/Routine creation sheet
         .sheet(isPresented: $showCreateTaskSheet) {
@@ -384,7 +416,7 @@ struct TaskNavigationView: View {
                 }
             })
             .environment(\.managedObjectContext, context)
-            .frame(height: 50)
+            .frame(height: 90) // Increased to accommodate the new tab bar
             
             // Custom container to ensure progress bar touches list
             VStack(spacing: 0) {

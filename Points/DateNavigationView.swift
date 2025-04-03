@@ -1,6 +1,105 @@
 import SwiftUI
 import CoreData
 
+struct CreateTabsView: View {
+    @Environment(\.managedObjectContext) private var context
+    @Environment(\.theme) private var theme
+    @State private var showCreateTaskSheet = false
+    @State private var createAsRoutine = false
+    @State private var createAsCritical = false
+    @ObservedObject private var taskControllers = TaskControllers.shared
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // +Routine tab
+            Button(action: {
+                createAsRoutine = true
+                createAsCritical = false
+                showCreateTaskSheet = true
+            }) {
+                Text("+Routine")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(theme.routinesTab)
+            }
+            
+            // +Task tab
+            Button(action: {
+                createAsRoutine = false
+                createAsCritical = false
+                showCreateTaskSheet = true
+            }) {
+                Text("+Task")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(theme.tasksTab)
+            }
+            
+            // +Critical tab
+            Button(action: {
+                createAsRoutine = false
+                createAsCritical = true
+                showCreateTaskSheet = true
+            }) {
+                Text("+Critical")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(theme.criticalColor)
+            }
+        }
+        .frame(height: 40)
+        .sheet(isPresented: $showCreateTaskSheet) {
+            TaskFormView(
+                mode: .create,
+                task: nil,
+                isPresented: $showCreateTaskSheet,
+                initialIsRoutine: createAsRoutine,
+                initialIsCritical: createAsCritical,
+                onSave: { values in
+                    // Extract values from the form
+                    let title = values["title"] as? String ?? (createAsRoutine ? "New Routine" : "New Task")
+                    let points = values["points"] as? NSDecimalNumber ?? 
+                        NSDecimalNumber(value: createAsRoutine ? 3.0 : Constants.Defaults.taskPoints)
+                    let target = values["target"] as? Int16 ?? 3
+                    let reward = values["reward"] as? NSDecimalNumber ?? 
+                        NSDecimalNumber(value: createAsRoutine ? 1.0 : 0.0)
+                    let max = values["max"] as? Int16 ?? 3
+                    let isRoutine = values["routine"] as? Bool ?? createAsRoutine
+                    let isOptional = values["optional"] as? Bool ?? true
+                    let isCritical = values["critical"] as? Bool ?? createAsCritical
+                    
+                    // Create the task using task manager
+                    let newTask = taskControllers.taskManager?.createTask(
+                        title: title,
+                        points: points,
+                        target: target,
+                        date: taskControllers.currentDateEntity,
+                        reward: reward,
+                        max: max,
+                        routine: isRoutine,
+                        optional: isOptional,
+                        critical: isCritical
+                    )
+                    
+                    // Notify that the task list has changed
+                    NotificationCenter.default.post(
+                        name: Constants.Notifications.taskListChanged,
+                        object: nil,
+                        userInfo: ["task": newTask as Any]
+                    )
+                },
+                onCancel: {
+                    // Just dismiss
+                    showCreateTaskSheet = false
+                }
+            )
+        }
+    }
+}
+
 struct DateNavigationView: View {
     @Environment(\.managedObjectContext) private var context
     @Environment(\.theme) private var theme
@@ -14,21 +113,28 @@ struct DateNavigationView: View {
     private var dateHelper: DateHelper { DateHelper(context: context) }
     
     var body: some View {
-        HStack {
-            // Left arrow button
-            navigationButton(direction: .backward)
+        VStack(spacing: 0) {
+            // Create tabs at the top
+            CreateTabsView()
+                .environment(\.managedObjectContext, context)
             
-            // Date display with formatted date, lighter & larger font
-            Text(formattedDate())
-                .font(.headline.weight(.light))
-                .scaleEffect(1.2)
-                .foregroundColor(theme.textPrimary)
-                .frame(maxWidth: .infinity)
-            
-            // Right arrow button
-            navigationButton(direction: .forward)
+            // Date navigation bar
+            HStack {
+                // Left arrow button
+                navigationButton(direction: .backward)
+                
+                // Date display with formatted date, lighter & larger font
+                Text(formattedDate())
+                    .font(.headline.weight(.light))
+                    .scaleEffect(1.2)
+                    .foregroundColor(theme.textPrimary)
+                    .frame(maxWidth: .infinity)
+                
+                // Right arrow button
+                navigationButton(direction: .forward)
+            }
+            .padding(.horizontal)
         }
-        .padding(.horizontal)
         .onAppear {
             updateDateEntity()
             
