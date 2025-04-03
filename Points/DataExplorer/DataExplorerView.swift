@@ -293,130 +293,16 @@ struct DataTaskListView: View {
             }
             .listStyle(PlainListStyle())
         }
-        .onAppear {
-            // Create sample tasks each time, always clearing the database first
-            clearExistingData()
-            createSampleTasks()
-        }
         .onReceive(NotificationCenter.default.publisher(for: Constants.Notifications.taskListChanged)) { _ in
-            // This will refresh the view when the database is cleared
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            // This will refresh the view when tasks are updated
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 // Small delay to ensure the database operation completes
                 refreshTrigger = UUID() // Trigger refresh
-                createSampleTasks() // Recreate sample data
             }
         }
         .id(refreshTrigger) // Force view refresh when this changes
     }
     
-    private func createSampleTasks() {
-        // Get today and yesterday dates
-        let today = Date()
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
-        
-        // Get or create date entities
-        let todayEntity = getOrCreateDateEntity(for: today)
-        let yesterdayEntity = getOrCreateDateEntity(for: yesterday)
-        
-        // Create tasks with specified names - separate into routines and regular tasks
-        let routineNames = ["Meditate", "Exercise", "Read"]
-        let taskNames = ["Shower", "Study", "Produce", "Clean", "Shop"]
-        
-        // Create routine tasks for today
-        createTask(name: routineNames[0], points: 5, target: 1, date: todayEntity, position: 0, routine: true)
-        createTask(name: routineNames[1], points: 8, target: 1, date: todayEntity, position: 1, routine: true)
-        
-        // Create regular tasks for today
-        createTask(name: taskNames[0], points: 3, target: 1, date: todayEntity, position: 2, routine: false)
-        createTask(name: taskNames[3], points: 4, target: 1, date: todayEntity, position: 3, routine: false)
-        
-        // Create routine tasks for yesterday
-        createTask(name: routineNames[0], points: 5, target: 1, date: yesterdayEntity, position: 0, routine: true)
-        createTask(name: routineNames[2], points: 6, target: 1, date: yesterdayEntity, position: 1, routine: true)
-        
-        // Create regular tasks for yesterday
-        createTask(name: taskNames[1], points: 6, target: 2, date: yesterdayEntity, position: 2, routine: false)
-        createTask(name: taskNames[2], points: 8, target: 1, date: yesterdayEntity, position: 3, routine: false)
-        
-        // Save changes
-        do {
-            try context.save()
-            print("Successfully created sample tasks and routines")
-        } catch {
-            print("Error creating sample tasks: \(error)")
-        }
-    }
-    
-    private func clearExistingData() {
-        // Delete any existing tasks and dates to avoid duplicates
-        let taskFetchRequest: NSFetchRequest<NSFetchRequestResult> = CoreDataTask.fetchRequest()
-        let dateFetchRequest: NSFetchRequest<NSFetchRequestResult> = CoreDataDate.fetchRequest()
-        
-        // Delete all existing tasks first
-        let taskDeleteRequest = NSBatchDeleteRequest(fetchRequest: taskFetchRequest)
-        taskDeleteRequest.resultType = .resultTypeObjectIDs
-        
-        // Delete all existing dates
-        let dateDeleteRequest = NSBatchDeleteRequest(fetchRequest: dateFetchRequest)
-        dateDeleteRequest.resultType = .resultTypeObjectIDs
-        
-        do {
-            // Execute delete requests and get result object IDs
-            let taskResult = try context.execute(taskDeleteRequest) as? NSBatchDeleteResult
-            let dateResult = try context.execute(dateDeleteRequest) as? NSBatchDeleteResult
-            
-            // Get deleted object IDs
-            let taskObjectIDs = taskResult?.result as? [NSManagedObjectID] ?? []
-            let dateObjectIDs = dateResult?.result as? [NSManagedObjectID] ?? []
-            
-            // Update context with changes
-            NSManagedObjectContext.mergeChanges(
-                fromRemoteContextSave: [NSDeletedObjectsKey: taskObjectIDs],
-                into: [context]
-            )
-            NSManagedObjectContext.mergeChanges(
-                fromRemoteContextSave: [NSDeletedObjectsKey: dateObjectIDs],
-                into: [context]
-            )
-            
-            // Final save to ensure consistent state
-            try context.save()
-            print("Successfully cleared all existing tasks and dates")
-        } catch {
-            print("Error clearing existing data: \(error)")
-        }
-    }
-    
-    private func getOrCreateDateEntity(for date: Date) -> CoreDataDate {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: date)
-        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-        
-        let fetchRequest: NSFetchRequest<CoreDataDate> = CoreDataDate.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "date >= %@ AND date < %@", startOfDay as NSDate, endOfDay as NSDate)
-        
-        if let existingDate = try? context.fetch(fetchRequest).first {
-            return existingDate
-        } else {
-            let newDate = CoreDataDate(context: context)
-            newDate.date = startOfDay
-            newDate.target = 5
-            newDate.points = NSDecimalNumber(value: 0)
-            return newDate
-        }
-    }
-    
-    private func createTask(name: String, points: Double, target: Int16, date: CoreDataDate, position: Int16, routine: Bool) {
-        let task = CoreDataTask(context: context)
-        task.title = name
-        task.points = NSDecimalNumber(value: points)
-        task.target = target
-        task.max = target + 2
-        task.completed = Int16.random(in: 0...Int16(target))
-        task.date = date
-        task.position = position
-        task.routine = routine
-    }
 }
 
 // Detailed view of a specific date
