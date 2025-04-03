@@ -15,9 +15,12 @@ struct DataExplorerView: View {
 
 // Main model list for the data explorer
 struct DataModelListView: View {
+    @State private var refreshTrigger = UUID()
+    
     let models = [
         ModelInfo(displayName: "Dates", entityName: "CoreDataDate", color: Constants.Colors.templateTab),
-        ModelInfo(displayName: "Tasks", entityName: "CoreDataTask", color: Constants.Colors.summaryTab)
+        ModelInfo(displayName: "Tasks", entityName: "CoreDataTask", color: Constants.Colors.tasksTab, filterType: .tasks),
+        ModelInfo(displayName: "Routines", entityName: "CoreDataTask", color: Constants.Colors.routinesTab, filterType: .routines)
         // Completions are excluded as they're an intermediate link table
     ]
     
@@ -50,6 +53,11 @@ struct DataModelListView: View {
             }
             .listStyle(PlainListStyle())
         }
+        .onReceive(NotificationCenter.default.publisher(for: Constants.Notifications.taskListChanged)) { _ in
+            // This will refresh the view when the database is cleared
+            refreshTrigger = UUID()  // Force view refresh
+        }
+        .id(refreshTrigger) // Force view refresh when this changes
     }
     
     @ViewBuilder
@@ -58,24 +66,53 @@ struct DataModelListView: View {
         case "CoreDataDate":
             DataDateListView()
         case "CoreDataTask":
-            DataTaskListView()
+            switch model.filterType {
+            case .tasks:
+                DataTaskListView(filterType: .tasks, title: "Tasks")
+            case .routines:
+                DataTaskListView(filterType: .routines, title: "Routines")
+            case .none:
+                DataTaskListView(filterType: .none, title: "All Tasks")
+            }
         default:
             EmptyView()
         }
     }
 }
 
+// Model filter type enum
+enum ModelFilterType {
+    case none     // No filter applied
+    case tasks    // Filter for tasks (routine == false)
+    case routines // Filter for routines (routine == true)
+}
+
 // Model information structure
 struct ModelInfo: Identifiable {
-    var id: String { entityName }
+    var id: String { 
+        if filterType != .none {
+            return "\(entityName)_\(filterType)"
+        }
+        return entityName 
+    }
     let displayName: String
     let entityName: String
     let color: Color
+    let filterType: ModelFilterType
+    
+    init(displayName: String, entityName: String, color: Color, filterType: ModelFilterType = .none) {
+        self.displayName = displayName
+        self.entityName = entityName
+        self.color = color
+        self.filterType = filterType
+    }
 }
 
 // List of all dates
 struct DataDateListView: View {
     @Environment(\.managedObjectContext) private var context
+    @State private var refreshTrigger = UUID()
+    
     @FetchRequest(
         entity: CoreDataDate.entity(),
         sortDescriptors: [NSSortDescriptor(keyPath: \CoreDataDate.date, ascending: false)],
@@ -128,6 +165,11 @@ struct DataDateListView: View {
             }
             .listStyle(PlainListStyle())
         }
+        .onReceive(NotificationCenter.default.publisher(for: Constants.Notifications.taskListChanged)) { _ in
+            // This will refresh the view when the database is cleared
+            refreshTrigger = UUID()  // Force view refresh
+        }
+        .id(refreshTrigger) // Force view refresh when this changes
     }
     
     // Format just the month
@@ -180,19 +222,48 @@ struct DataTaskListView: View {
     @Environment(\.managedObjectContext) private var context
     @State private var isInitialized = false
     
-    @FetchRequest(
-        entity: CoreDataTask.entity(),
-        sortDescriptors: [
-            NSSortDescriptor(keyPath: \CoreDataTask.date?.date, ascending: false),
-            NSSortDescriptor(keyPath: \CoreDataTask.position, ascending: true)
-        ],
-        animation: .default)
-    private var tasks: FetchedResults<CoreDataTask>
+    // Listen for database clearing notifications
+    @State private var refreshTrigger = UUID()
+    
+    // Filter type property
+    var filterType: ModelFilterType
+    var title: String
+    
+    // Custom fetch request with predicate based on filter type
+    @FetchRequest private var tasks: FetchedResults<CoreDataTask>
+    
+    init(filterType: ModelFilterType = .none, title: String = "Tasks") {
+        self.filterType = filterType
+        self.title = title
+        
+        // Create predicate based on filter type
+        var predicate: NSPredicate? = nil
+        
+        switch filterType {
+        case .tasks:
+            predicate = NSPredicate(format: "routine == %@", NSNumber(value: false))
+        case .routines:
+            predicate = NSPredicate(format: "routine == %@", NSNumber(value: true))
+        case .none:
+            predicate = nil
+        }
+        
+        // Initialize the fetch request with the predicate
+        _tasks = FetchRequest<CoreDataTask>(
+            entity: CoreDataTask.entity(),
+            sortDescriptors: [
+                NSSortDescriptor(keyPath: \CoreDataTask.date?.date, ascending: false),
+                NSSortDescriptor(keyPath: \CoreDataTask.position, ascending: true)
+            ],
+            predicate: predicate,
+            animation: .default
+        )
+    }
     
     var body: some View {
         VStack(spacing: 0) {
             // Title positioned exactly like "Coming Soon"
-            Text("Tasks")
+            Text(title)
                 .font(.largeTitle)
                 .foregroundColor(.secondary)
             
@@ -208,9 +279,9 @@ struct DataTaskListView: View {
                         .padding(.horizontal, 8)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(
-                            index % 2 == 0 ? 
-                            Constants.Colors.templateTab.opacity(0.2) : 
-                            Constants.Colors.summaryTab.opacity(0.2)
+                            task.routine ?
+                            Constants.Colors.routinesTab.opacity(0.2) :
+                            Constants.Colors.tasksTab.opacity(0.2)
                         )
                         .cornerRadius(8)
                     }
@@ -227,6 +298,15 @@ struct DataTaskListView: View {
             clearExistingData()
             createSampleTasks()
         }
+        .onReceive(NotificationCenter.default.publisher(for: Constants.Notifications.taskListChanged)) { _ in
+            // This will refresh the view when the database is cleared
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // Small delay to ensure the database operation completes
+                refreshTrigger = UUID() // Trigger refresh
+                createSampleTasks() // Recreate sample data
+            }
+        }
+        .id(refreshTrigger) // Force view refresh when this changes
     }
     
     private func createSampleTasks() {
@@ -238,22 +318,30 @@ struct DataTaskListView: View {
         let todayEntity = getOrCreateDateEntity(for: today)
         let yesterdayEntity = getOrCreateDateEntity(for: yesterday)
         
-        // Create tasks with specified names
-        let taskNames = ["Meditate", "Shower", "Produce", "Study", "Exercise"]
+        // Create tasks with specified names - separate into routines and regular tasks
+        let routineNames = ["Meditate", "Exercise", "Read"]
+        let taskNames = ["Shower", "Study", "Produce", "Clean", "Shop"]
         
-        // Create tasks for today
-        createTask(name: taskNames[0], points: 5, target: 1, date: todayEntity, position: 0)
-        createTask(name: taskNames[1], points: 3, target: 1, date: todayEntity, position: 1)
-        createTask(name: taskNames[4], points: 8, target: 1, date: todayEntity, position: 2)
+        // Create routine tasks for today
+        createTask(name: routineNames[0], points: 5, target: 1, date: todayEntity, position: 0, routine: true)
+        createTask(name: routineNames[1], points: 8, target: 1, date: todayEntity, position: 1, routine: true)
         
-        // Create tasks for yesterday
-        createTask(name: taskNames[2], points: 8, target: 1, date: yesterdayEntity, position: 0)
-        createTask(name: taskNames[3], points: 6, target: 2, date: yesterdayEntity, position: 1)
+        // Create regular tasks for today
+        createTask(name: taskNames[0], points: 3, target: 1, date: todayEntity, position: 2, routine: false)
+        createTask(name: taskNames[3], points: 4, target: 1, date: todayEntity, position: 3, routine: false)
+        
+        // Create routine tasks for yesterday
+        createTask(name: routineNames[0], points: 5, target: 1, date: yesterdayEntity, position: 0, routine: true)
+        createTask(name: routineNames[2], points: 6, target: 1, date: yesterdayEntity, position: 1, routine: true)
+        
+        // Create regular tasks for yesterday
+        createTask(name: taskNames[1], points: 6, target: 2, date: yesterdayEntity, position: 2, routine: false)
+        createTask(name: taskNames[2], points: 8, target: 1, date: yesterdayEntity, position: 3, routine: false)
         
         // Save changes
         do {
             try context.save()
-            print("Successfully created sample tasks with names: \(taskNames)")
+            print("Successfully created sample tasks and routines")
         } catch {
             print("Error creating sample tasks: \(error)")
         }
@@ -318,7 +406,7 @@ struct DataTaskListView: View {
         }
     }
     
-    private func createTask(name: String, points: Double, target: Int16, date: CoreDataDate, position: Int16) {
+    private func createTask(name: String, points: Double, target: Int16, date: CoreDataDate, position: Int16, routine: Bool) {
         let task = CoreDataTask(context: context)
         task.title = name
         task.points = NSDecimalNumber(value: points)
@@ -327,13 +415,14 @@ struct DataTaskListView: View {
         task.completed = Int16.random(in: 0...Int16(target))
         task.date = date
         task.position = position
-        task.routine = true
+        task.routine = routine
     }
 }
 
 // Detailed view of a specific date
 struct DataDateDetailView: View {
     @ObservedObject var date: CoreDataDate
+    @State private var refreshTrigger = UUID()
     
     var body: some View {
         VStack(spacing: 0) {
@@ -367,6 +456,11 @@ struct DataDateDetailView: View {
             }
             .listStyle(PlainListStyle())
         }
+        .onReceive(NotificationCenter.default.publisher(for: Constants.Notifications.taskListChanged)) { _ in
+            // This will refresh the view when the database is cleared
+            refreshTrigger = UUID()  // Force view refresh
+        }
+        .id(refreshTrigger) // Force view refresh when this changes
     }
     
     // Format just the month
@@ -470,6 +564,7 @@ struct DataDateDetailView: View {
 // Detailed view of a specific task
 struct DataTaskDetailView: View {
     @ObservedObject var task: CoreDataTask
+    @State private var refreshTrigger = UUID()
     
     // Colors for attribute rows
     private let colors: [Color] = [
@@ -494,6 +589,11 @@ struct DataTaskDetailView: View {
             }
             .listStyle(PlainListStyle())
         }
+        .onReceive(NotificationCenter.default.publisher(for: Constants.Notifications.taskListChanged)) { _ in
+            // This will refresh the view when the database is cleared
+            refreshTrigger = UUID()  // Force view refresh
+        }
+        .id(refreshTrigger) // Force view refresh when this changes
     }
     
     private var attributesSection: some View {
