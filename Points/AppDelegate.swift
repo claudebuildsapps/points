@@ -34,7 +34,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Prevent the device from sleeping globally
+        application.isIdleTimerDisabled = true
+        
         return true
+    }
+    
+    // Ensure device stays awake when app is about to enter foreground
+    func applicationWillEnterForeground(_ application: UIApplication) {
+        application.isIdleTimerDisabled = true
+    }
+    
+    // Handle when app becomes active
+    func applicationDidBecomeActive(_ application: UIApplication) {
+        application.isIdleTimerDisabled = true
     }
 
     // MARK: UISceneSession Lifecycle
