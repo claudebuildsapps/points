@@ -1,34 +1,23 @@
 #!/bin/bash
 
-# Colors for prettier output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Super simplified run script - just build and install
+echo "⏳ Building Points app..."
 
-# Device UDID - using the connected device
-DEVICE_ID="00008130-001A0C1914C3001C"
+# Build for device
+xcodebuild -project ../Points.xcodeproj -scheme Points -configuration Debug build -quiet
 
-# App bundle identifier 
-BUNDLE_ID="com.sokai.Points"
-
-echo -e "${BLUE}Building Points app for device...${NC}"
-
-# Build for iOS device - only rebuild what's changed
-xcodebuild -project ../Points.xcodeproj -scheme Points -destination "id=$DEVICE_ID" -configuration Debug build -quiet
-
-# Check if build succeeded
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}Build successful!${NC}"
+    echo "✅ Build successful!"
     
-    # Find the most recent build product path
+    # Find the app path
     APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData/Points-*/Build/Products/Debug-iphoneos -name "Points.app" -type d | head -n 1)
     
-    echo -e "${BLUE}Installing and launching on device...${NC}"
-    # Install and launch on device
-    ios-deploy --id $DEVICE_ID --bundle "$APP_PATH" --no-wifi --justlaunch
+    echo "📲 Installing on device..."
+    # Install only with ios-deploy (simple and most reliable)
+    ios-deploy --bundle "$APP_PATH" --no-wifi
     
-    echo -e "${GREEN}App is now running on your device${NC}"
+    echo "✨ Done! Please tap the app icon on your device to open it."
 else
-    echo -e "\033[0;31mBuild failed${NC}"
+    echo "❌ Build failed"
     exit 1
 fi
