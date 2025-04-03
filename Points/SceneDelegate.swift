@@ -23,5 +23,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         self.window = window
         window.makeKeyAndVisible()
+        
+        // Prevent the device from sleeping while the app is in the foreground
+        UIApplication.shared.isIdleTimerDisabled = true
     }
 }
