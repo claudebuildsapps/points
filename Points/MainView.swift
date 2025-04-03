@@ -275,10 +275,10 @@ struct MainView: View {
                     let title = values["title"] as? String ?? (defaultRoutine ? "New Routine" : "New Task")
                     let points = values["points"] as? NSDecimalNumber ?? 
                         NSDecimalNumber(value: defaultRoutine ? 3.0 : Constants.Defaults.taskPoints)
-                    let target = values["target"] as? Int16 ?? 3
+                    let target = values["target"] as? Int16 ?? Constants.Defaults.taskTarget
                     let reward = values["reward"] as? NSDecimalNumber ?? 
                         NSDecimalNumber(value: defaultRoutine ? 1.0 : 0.0)
-                    let max = values["max"] as? Int16 ?? 3
+                    let max = values["max"] as? Int16 ?? Constants.Defaults.taskMax
                     // Use the form's actual isRoutine value, with defaultRoutine as fallback
                     let isRoutine = values["routine"] as? Bool ?? defaultRoutine
                     let isOptional = values["optional"] as? Bool ?? true

@@ -63,10 +63,10 @@ struct CreateTabsView: View {
                     let title = values["title"] as? String ?? (createAsRoutine ? "New Routine" : "New Task")
                     let points = values["points"] as? NSDecimalNumber ?? 
                         NSDecimalNumber(value: createAsRoutine ? 3.0 : Constants.Defaults.taskPoints)
-                    let target = values["target"] as? Int16 ?? 3
+                    let target = values["target"] as? Int16 ?? Constants.Defaults.taskTarget
                     let reward = values["reward"] as? NSDecimalNumber ?? 
                         NSDecimalNumber(value: createAsRoutine ? 1.0 : 0.0)
-                    let max = values["max"] as? Int16 ?? 3
+                    let max = values["max"] as? Int16 ?? Constants.Defaults.taskMax
                     let isRoutine = values["routine"] as? Bool ?? createAsRoutine
                     let isOptional = values["optional"] as? Bool ?? true
                     let isCritical = values["critical"] as? Bool ?? createAsCritical

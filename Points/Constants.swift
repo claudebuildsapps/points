@@ -45,8 +45,8 @@ struct Constants {
     struct Defaults {
         static let targetPoints = 5
         static let taskPoints = 1.0
-        static let taskTarget = 3
-        static let taskMax = 8
+        static let taskTarget = 1
+        static let taskMax = 1
     }
     
     // Animation durations
