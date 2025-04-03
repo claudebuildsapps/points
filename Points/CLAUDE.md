@@ -2,12 +2,15 @@
 
 ## Build Commands
 - Build: `xcodebuild -scheme Points -configuration Debug`
-- Run: Open `.xcodeproj` file in Xcode and use Run button (⌘R) or use the `./run` script to build and deploy to a connected device
+- Run: Open `.xcodeproj` file in Xcode and use Run button (⌘R)
 - Clean: `xcodebuild clean -scheme Points`
 
 ## Guidance for refactoring or development
-- After every query is completed, run the app using the `./run` script to test changes on a physical device
-- After verifying changes work, ask if I would like to commit the changes, write your own commit message, and push the code, once I approve the change
+- Focus on implementing requested changes accurately and efficiently
+- Only commit changes when explicitly asked with a "commit" command
+- When committing, write a descriptive commit message following Git best practices
+- Don't ask about committing changes unless specifically requested
+- Use the iOS simulator or Xcode for testing rather than scripts
 
 ## Code Style Guidelines
 - Use 4-space indentation consistently
@@ -44,8 +47,8 @@
 - Do not examine files larger than 500kb to save compute resources (especially asset files)
 - Primarily work within the /Points directory as the main source folder
 - Skip parsing the Assets.xcassets contents unless specifically needed for a UI change
-- After making changes, always suggest running the app using the `./run` script to test on a physical device
-- The run script automates building, installing, and launching the app on a connected iOS device
+- Only commit changes when explicitly asked with the word "commit"
+- Keep responses concise and focused on the requested task
 
 ## Component Reference Map
 
@@ -137,6 +140,57 @@ This section maps UI components to their source files, providing descriptions fo
 #### Gamification Engine (GamificationEngine.swift)
 - **Reward Logic**: Handles point calculations and bonuses
 - **Progress Tracking**: Manages completion tracking across tasks
+
+## UI Elements
+
+### Main Screen
+
+#### Top Navigation Area
+- **Date Navigator**: Left/right arrows with date text in center
+- **Progress Bar**: Horizontal bar showing completion progress
+- **Target Marker**: Green vertical line with pill showing target points
+- **Current Points Badge**: Pill showing current points that moves along progress bar
+- **Creation Tab Bar**: Three-button row (+Routine, +Task, +Critical) directly below progress bar
+
+#### Task List
+- **Task Cell**: Individual task/routine item in the list
+- **Task Points Badge**: Colored badge on left side showing point value
+- **Task Edit Button**: Pencil icon button next to points badge
+- **Task Title**: Main text of the task
+- **Completion Slider**: Circle showing completed value with swipe functionality
+- **Critical Indicator**: Orange exclamation mark for critical tasks
+
+#### Footer Area
+- **Points Counter**: Shows total points earned for current day
+- **Action Buttons**: Row of action buttons above tabs (+Routine, +Task, Home, ?, Clear)
+- **Footer Tab Bar**: Bottom navigation tabs (Routines, Tasks, Templates, etc.)
+
+### Task/Routine Create/Edit Screen
+
+#### Header Area
+- **Screen Title**: "New Task"/"New Routine"/"Edit Task"/"Edit Routine" text
+- **Template Button**: Document icon for copying task as template (edit mode only)
+- **Delete Button**: Trash icon for deleting task (edit mode only)
+
+#### Form Fields
+- **Task Name Field**: Text input for task/routine name
+- **Points Field**: Numeric input for points value
+- **Target Field**: Numeric input for completion target
+- **Reward Field**: Numeric input for reward value
+- **Max Field**: Numeric input for maximum completions
+- **Routine Toggle**: Switch for routine/task type
+- **Optional Toggle**: Switch for optional/required status
+- **Critical Toggle**: Switch for critical priority
+
+#### Custom Keyboard
+- **Number Pad**: Custom numeric keypad for number inputs
+- **Decimal Point**: Button for decimal values (in points and reward fields)
+- **Clear Button**: Button to clear current value
+- **Done Button**: Checkmark button to confirm input
+
+#### Bottom Action Buttons
+- **Cancel Button**: Red button to dismiss without saving
+- **Save/Create Button**: Green button to save changes or create new task
 
 ## Project Structure
 - Main source code is in the /Points directory
