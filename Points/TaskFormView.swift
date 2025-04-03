@@ -74,9 +74,9 @@ struct TaskFormView: View {
             // Edit mode - use task values with integer formatting for decimals
             self._title = State(initialValue: task.title ?? "")
             self._points = State(initialValue: "\(Int(task.points?.doubleValue ?? 5.0))")
-            self._target = State(initialValue: "\(task.target > 0 ? task.target : 3)")
+            self._target = State(initialValue: "\(task.target > 0 ? task.target : Constants.Defaults.taskTarget)")
             self._reward = State(initialValue: "\(Int(task.reward?.doubleValue ?? 2.0))")
-            self._max = State(initialValue: "\(Swift.max(task.max, task.target > 0 ? task.target : 3))")
+            self._max = State(initialValue: "\(Swift.max(task.max, task.target > 0 ? task.target : Constants.Defaults.taskTarget))")
             self._isRoutine = State(initialValue: task.routine)
             self._isOptional = State(initialValue: task.optional)
             // Default critical to false if not set (for backward compatibility)
@@ -89,9 +89,9 @@ struct TaskFormView: View {
             
             self._title = State(initialValue: "")
             self._points = State(initialValue: useRoutine ? "3" : "5")
-            self._target = State(initialValue: "3")
+            self._target = State(initialValue: "\(Constants.Defaults.taskTarget)")
             self._reward = State(initialValue: useRoutine ? "1" : "0")
-            self._max = State(initialValue: "3")
+            self._max = State(initialValue: "\(Constants.Defaults.taskMax)")
             // CRITICAL: Always set isRoutine based on initialIsRoutine parameter
             self._isRoutine = State(initialValue: useRoutine)
             // Always set optional to true for both routines and tasks
@@ -434,8 +434,8 @@ struct TaskFormView: View {
     
     // Prepare values for saving
     func prepareValuesForSave() -> [String: Any] {
-        let targetValue = Int16(target) ?? 3
-        var maxValue = Int16(max) ?? 3
+        let targetValue = Int16(target) ?? Int16(Constants.Defaults.taskTarget)
+        var maxValue = Int16(max) ?? Int16(Constants.Defaults.taskMax)
         if maxValue < targetValue {
             maxValue = targetValue
         }
