@@ -41,20 +41,8 @@ struct TaskCellView: View {
                 
                 // Content row
                 HStack(spacing: 0) { // No default spacing - we'll control spacing individually
-                    // Critical indicator (if task is critical)
-                    if task.getCritical() {
-                        ZStack {
-                            Circle()
-                                .fill(theme.criticalColor)
-                                .frame(width: 24, height: 24)
-                                .shadow(color: theme.criticalColor.opacity(0.6), radius: 2, x: 0, y: 1)
-                            
-                            Image(systemName: "exclamationmark")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                        .padding(.leading, 8)
-                    }
+                    // Critical indicator moved to be closer to the completion slider
+                    Spacer() // This pushes the exclamation mark to the right
                     
                     // Action buttons
                     HStack(spacing: 10) { // Increased spacing between points display and edit button
@@ -63,17 +51,17 @@ struct TaskCellView: View {
                             ZStack {
                                 // Points background - dark colored background
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(task.routine ? theme.routinesTab : theme.tasksTab) // Full color background
+                                    .fill(task.getCritical() ? theme.criticalColor : (task.routine ? theme.routinesTab : theme.tasksTab)) // Full color background with critical priority
                                     .frame(width: 45, height: 40)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
                                             .stroke(
-                                                task.routine ? theme.routinesTab : theme.tasksTab,
+                                                task.getCritical() ? theme.criticalColor : (task.routine ? theme.routinesTab : theme.tasksTab),
                                                 lineWidth: 2
                                             )
                                     )
                                     .shadow(
-                                        color: (task.routine ? theme.routinesTab : theme.tasksTab).opacity(0.4),
+                                        color: (task.getCritical() ? theme.criticalColor : (task.routine ? theme.routinesTab : theme.tasksTab)).opacity(0.4),
                                         radius: 2,
                                         x: 0,
                                         y: 1
@@ -100,7 +88,7 @@ struct TaskCellView: View {
                         Button(action: toggleEditMode) {
                             Image(systemName: "pencil")
                                 .themeCircleButton(
-                                    color: task.routine ? theme.routinesTab : theme.tasksTab,
+                                    color: task.getCritical() ? theme.criticalColor : (task.routine ? theme.routinesTab : theme.tasksTab),
                                     textColor: theme.textInverted
                                 )
                         }
@@ -123,6 +111,21 @@ struct TaskCellView: View {
                     .padding(.leading, 5) // Added padding to offset from edit button
                     .frame(maxWidth: .infinity, alignment: .leading)
 
+                    // Add the critical indicator before the completion slider if task is critical
+                    if task.getCritical() {
+                        ZStack {
+                            Circle()
+                                .fill(theme.criticalColor)
+                                .frame(width: 24, height: 24)
+                                .shadow(color: theme.criticalColor.opacity(0.6), radius: 2, x: 0, y: 1)
+                            
+                            Image(systemName: "exclamationmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 4) // Add a small gap between indicator and slider
+                    }
+                    
                     // Enhanced slider-style completion tracker with swipe gesture
                     ZStack(alignment: .leading) {
                         // Track background - oval shape
@@ -142,7 +145,7 @@ struct TaskCellView: View {
                         // Determine circle color based on completion vs target
                         let circleColor = Int(task.completed) > Int(task.target) ? 
                             theme.dataTab : // Use data tab color for going over target
-                            theme.templateTab // Use template tab color for normal progress
+                            (task.getCritical() ? theme.criticalColor : theme.templateTab) // Use critical or template color
                         
                         // Sliding completion counter
                         ZStack {
@@ -271,13 +274,15 @@ struct TaskCellView: View {
         let completed = Int(task.completed)
         let target = Int(task.target)
         let isRoutine = task.routine
+        let isCritical = task.getCritical()
         
         // Base colors for task types - use tab colors
         let routineBaseColor = theme.routinesTab
         let taskBaseColor = theme.tasksTab
+        let criticalBaseColor = theme.criticalColor
         
-        // Choose base color based on item type
-        let baseColor = isRoutine ? routineBaseColor : taskBaseColor
+        // Choose base color based on item type (critical takes precedence)
+        let baseColor = isCritical ? criticalBaseColor : (isRoutine ? routineBaseColor : taskBaseColor)
         
         if completed >= target {
             // Completed state - more opaque

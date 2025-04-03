@@ -114,10 +114,6 @@ struct DateNavigationView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Create tabs at the top
-            CreateTabsView()
-                .environment(\.managedObjectContext, context)
-            
             // Date navigation bar
             HStack {
                 // Left arrow button

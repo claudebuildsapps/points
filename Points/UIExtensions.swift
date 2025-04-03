@@ -58,7 +58,7 @@ struct LightTheme: AppTheme {
     var templateTab = Color("lighterYellowInversion")
     var summaryTab = Color(red: 0.7, green: 0.6, blue: 0.5)
     var dataTab = Color(red: 0.8, green: 0.5, blue: 0.4)
-    var criticalColor = Color.orange
+    var criticalColor = Color(red: 0.85, green: 0.45, blue: 0.2) // Richer, more cohesive orange
     
     // UI Element colors
     var progressBackground = Color(UIColor.systemGray5)
@@ -94,7 +94,7 @@ struct DarkTheme: AppTheme {
     var templateTab = Color("lighterYellowInversion")
     var summaryTab = Color(red: 0.4, green: 0.5, blue: 0.6)
     var dataTab = Color(red: 0.45, green: 0.6, blue: 0.7)
-    var criticalColor = Color.orange.opacity(0.9)
+    var criticalColor = Color(red: 0.7, green: 0.35, blue: 0.15).opacity(0.95) // Darker orange for dark mode
     
     // UI Element colors
     var progressBackground = Color(UIColor.systemGray6)

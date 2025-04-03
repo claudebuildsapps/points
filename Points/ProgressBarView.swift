@@ -8,8 +8,8 @@ struct ProgressBarView: View {
     @State private var isEditingTarget: Bool = false // Track if target is being edited
     @State private var editableTarget: String = "100" // For editing with keyboard
     
-    // Custom dark green color for target marker
-    private let darkGreenColor = Color(red: 0.05, green: 0.35, blue: 0.15) // Darker green shade for target
+    // Custom green color for target marker
+    private let darkGreenColor = Color(red: 0.2, green: 0.6, blue: 0.4) // Vibrant green that fits better with the palette
     
     init(progress: Binding<Float> = .constant(0)) {
         self._progress = progress
@@ -18,9 +18,6 @@ struct ProgressBarView: View {
     var body: some View {
         // Progress bar with increased spacing to avoid overlap
         VStack(spacing: 0) {
-            // Add more spacer to push the bar down significantly
-            Spacer().frame(height: 15)
-            
             // Full-width rectangular progress bar with target indicator
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
@@ -135,9 +132,6 @@ struct ProgressBarView: View {
                 }
             }
             .frame(height: 24) // Maintain taller progress bar
-            
-            // Add spacer after progress bar to avoid tabs overlap
-            Spacer().frame(height: 10)
         }
         .padding(.horizontal, 0) // No horizontal padding - truly full width
         .onAppear {

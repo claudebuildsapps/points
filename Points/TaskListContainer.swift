@@ -72,12 +72,7 @@ struct TaskListContainer: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Filter tabs for Routines and Tasks
-            FilterTabBarView(currentFilter: refresher.taskFilter) { filter in
-                refresher.toggleFilter(filter)
-            }
-            
-            // Task list view
+            // Task list view (removed the filter tabs)
             TaskListView(
                 tasks: tasks,
                 onDecrement: { task in

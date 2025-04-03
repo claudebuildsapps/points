@@ -416,12 +416,17 @@ struct TaskNavigationView: View {
                 }
             })
             .environment(\.managedObjectContext, context)
-            .frame(height: 90) // Increased to accommodate the new tab bar
+            .frame(height: 50) // Reduced height as tab bar was removed
             
             // Custom container to ensure progress bar touches list
             VStack(spacing: 0) {
                 // Full-width progress bar with daily target
                 ProgressBarView(progress: $progress)
+                
+                // Add the CreateTabsView directly below the progress bar
+                CreateTabsView()
+                    .environment(\.managedObjectContext, context)
+                    .padding(0) // Ensure no padding
                 
                 // Task list with absolutely no spacing
                 if let dateEntity = currentDateEntity {
