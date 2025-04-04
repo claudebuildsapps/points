@@ -74,9 +74,9 @@ struct TaskFormView: View {
             // Edit mode - use task values with integer formatting for decimals
             self._title = State(initialValue: task.title ?? "")
             self._points = State(initialValue: "\(Int(task.points?.doubleValue ?? 5.0))")
-            self._target = State(initialValue: "\(task.target > 0 ? task.target : Constants.Defaults.taskTarget)")
+            self._target = State(initialValue: "\(task.target > 0 ? task.target : Int16(Constants.Defaults.taskTarget))")
             self._reward = State(initialValue: "\(Int(task.reward?.doubleValue ?? 2.0))")
-            self._max = State(initialValue: "\(Swift.max(task.max, task.target > 0 ? task.target : Constants.Defaults.taskTarget))")
+            self._max = State(initialValue: "\(Swift.max(task.max, task.target > 0 ? task.target : Int16(Constants.Defaults.taskTarget)))")
             self._isRoutine = State(initialValue: task.routine)
             self._isOptional = State(initialValue: task.optional)
             // Default critical to false if not set (for backward compatibility)

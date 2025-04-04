@@ -120,7 +120,7 @@ class TaskManager {
         task.points = points
         task.target = target
         task.completed = 0
-        task.max = max ?? Constants.Defaults.taskMax // Use provided max or default constant
+        task.max = max ?? Int16(Constants.Defaults.taskMax) // Use provided max or default constant
         task.position = Int16(fetchTasks().count)
         task.routine = routine
         task.optional = optional

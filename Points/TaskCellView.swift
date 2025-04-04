@@ -83,6 +83,18 @@ struct TaskCellView: View {
                             }
                         }
                         .frame(width: 45)
+                        .helpMetadata(HelpMetadata(
+                            id: "task-points-badge",
+                            title: "Task Point Value",
+                            description: "Shows how many points this task is worth when completed.",
+                            usageHints: [
+                                "Higher point values indicate more important tasks",
+                                "Routines typically have higher point values",
+                                "You can customize point values when editing tasks",
+                                "Points contribute to your daily progress total"
+                            ],
+                            importance: .important
+                        ))
                         
                         // Edit button - color based on whether it's a routine or task
                         Button(action: toggleEditMode) {
@@ -97,6 +109,18 @@ struct TaskCellView: View {
                         .contentShape(Rectangle())
                         .onTapGesture(perform: toggleEditMode)
                         .padding(.trailing, 2) // Small padding between edit button and title
+                        .helpMetadata(HelpMetadata(
+                            id: "task-edit-button",
+                            title: "Edit Task Button",
+                            description: "Opens the task editor to modify this task's properties.",
+                            usageHints: [
+                                "Edit task title, points, target, and other properties",
+                                "Delete or duplicate the task",
+                                "Convert tasks to templates for reuse",
+                                "Change task type (routine/task/critical)"
+                            ],
+                            importance: .important
+                        ))
                     }
 
                     // Task title only (removed date)
@@ -110,6 +134,17 @@ struct TaskCellView: View {
                     }
                     .padding(.leading, 5) // Added padding to offset from edit button
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .helpMetadata(HelpMetadata(
+                        id: "task-title",
+                        title: "Task Title",
+                        description: "The name of the task or routine to complete.",
+                        usageHints: [
+                            "Tap the entire row to increase completion count",
+                            "Different background shades indicate completion progress",
+                            "Colored backgrounds indicate task type (blue for tasks, green for routines, red for critical)"
+                        ],
+                        importance: .informational
+                    ))
 
                     // Add the critical indicator before the completion slider if task is critical
                     if task.getCritical() {
@@ -124,6 +159,18 @@ struct TaskCellView: View {
                                 .foregroundColor(.white)
                         }
                         .padding(.horizontal, 4) // Add a small gap between indicator and slider
+                        .helpMetadata(HelpMetadata(
+                            id: "critical-indicator",
+                            title: "Critical Task Indicator",
+                            description: "Indicates this is a high-priority task.",
+                            usageHints: [
+                                "Critical tasks are visually highlighted for emphasis",
+                                "Use for important deadlines or must-do tasks",
+                                "Helps you identify your highest priority items",
+                                "Can be set when creating or editing a task"
+                            ],
+                            importance: .important
+                        ))
                     }
                     
                     // Enhanced slider-style completion tracker with swipe gesture
@@ -165,6 +212,19 @@ struct TaskCellView: View {
                     }
                     .frame(width: 80, height: 32) // Maintain increased overall size
                     .contentShape(Rectangle()) // Make entire area tappable
+                    .helpMetadata(HelpMetadata(
+                        id: "completion-slider",
+                        title: "Completion Counter",
+                        description: "Shows and controls how many times you've completed this task.",
+                        usageHints: [
+                            "Swipe left to decrease the count",
+                            "Tap the task row to increase the count",
+                            "The slider position represents progress toward target",
+                            "The counter turns blue when exceeding your target",
+                            "Task background darkens as you approach completion"
+                        ],
+                        importance: .important
+                    ))
                     .gesture(
                         // Add swipe left gesture for decrement
                         DragGesture(minimumDistance: 10, coordinateSpace: .local)
