@@ -106,6 +106,13 @@ struct NumericField: View {
                                     "Once max is reached, no more points can be earned",
                                     "Only whole numbers are allowed"
                                 ]
+                            default:
+                                // Keep default values for any other fields
+                                fieldDescription = "Enter a numeric value"
+                                fieldTips = [
+                                    "Tap to open the numeric keyboard",
+                                    "Enter the appropriate value"
+                                ]
                             }
                             
                             helpSystem.registerElement(
