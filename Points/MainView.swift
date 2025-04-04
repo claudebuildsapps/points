@@ -559,6 +559,7 @@ struct TaskNavigationView: View {
     @State private var isAnimatingPoints: Bool = false
     
     @ObservedObject private var taskControllers = TaskControllers.shared
+    @ObservedObject private var helpSystem = HelpSystem.shared // For help system integration
     
     var body: some View {
         // Using zero spacing to ensure elements touch with no gaps
@@ -571,33 +572,75 @@ struct TaskNavigationView: View {
                 
                 Spacer()
                 
-                Button(action: {
-                    showAppMenu.toggle()
-                }) {
-                    // Custom stacked hamburger icon with more spacing between lines
-                    VStack(spacing: 6) { // Increased spacing between lines
-                        ForEach(0..<3) { _ in
+                // Hamburger menu with custom help mode integration
+                ZStack {
+                    // Main button that maintains its appearance
+                    Button(action: {
+                        // Only trigger the action if not in help mode
+                        if !helpSystem.isHelpModeActive {
+                            showAppMenu.toggle()
+                        }
+                    }) {
+                        // Custom stacked hamburger icon with more spacing between lines
+                        VStack(spacing: 6) { // Increased spacing between lines
+                            ForEach(0..<3) { _ in
+                                Rectangle()
+                                    .frame(width: 22, height: 2) // Slightly wider and thinner lines
+                                    .foregroundColor(theme.textPrimary)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 8)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(helpSystem.isHelpModeActive)
+                    
+                    // Help mode overlay
+                    if helpSystem.isHelpModeActive {
+                        // Invisible button for help mode with precisely sized touch area
+                        Button(action: {
+                            helpSystem.highlightElement("app-menu-button")
+                        }) {
                             Rectangle()
-                                .frame(width: 22, height: 2) // Slightly wider and thinner lines
-                                .foregroundColor(theme.textPrimary)
+                                .fill(Color.white.opacity(0.001))
+                                .frame(width: 38, height: 38) // Compact frame matching the button size
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        .zIndex(100)
+                        
+                        // Custom highlight when this element is selected
+                        if helpSystem.isElementHighlighted("app-menu-button") {
+                            Circle()
+                                .stroke(Color.blue, lineWidth: 2)
+                                .frame(width: 38, height: 38) // Tight circular outline
+                                .zIndex(99)
                         }
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 8)
-                    .contentShape(Rectangle())
                 }
-                .buttonStyle(PlainButtonStyle())
-                .helpMetadata(HelpMetadata(
-                    id: "app-menu-button",
-                    title: "App Menu",
-                    description: "Opens the app menu with additional options and settings.",
-                    usageHints: [
-                        "Access app settings and preferences",
-                        "Find additional tools and options",
-                        "Quick access to app features"
-                    ],
-                    importance: .informational
-                ))
+                .overlay(
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear {
+                                helpSystem.registerElement(
+                                    id: "app-menu-button",
+                                    metadata: HelpMetadata(
+                                        id: "app-menu-button",
+                                        title: "App Menu",
+                                        description: "Opens the app menu with additional options and settings.",
+                                        usageHints: [
+                                            "Access app settings and preferences",
+                                            "Find additional tools and options",
+                                            "Quick access to app features"
+                                        ],
+                                        importance: .informational
+                                    ),
+                                    frame: geo.frame(in: .global)
+                                )
+                            }
+                    }
+                )
             }
             .padding(.horizontal, 16)
             .frame(height: 44) // Increased height for app header

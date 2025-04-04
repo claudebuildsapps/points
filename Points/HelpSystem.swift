@@ -248,7 +248,8 @@ struct HelpOverlayModifier: ViewModifier {
                                    metadata.id == "progress-bar-beyond-target" ||
                                    metadata.id == "target-indicator" ||
                                    metadata.id == "points-indicator" ||
-                                   metadata.id == "info-button" {
+                                   metadata.id == "info-button" ||
+                                   metadata.id == "app-menu-button" {
                                 // No highlight here - handled directly in the component
                                 Color.clear.frame(width: 0, height: 0)
                             }
