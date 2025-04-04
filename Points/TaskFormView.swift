@@ -154,16 +154,20 @@ struct TaskFormView: View {
                             .font(.system(size: 16))
                             .foregroundColor(.gray)
                         
-                        // Native text field for title input
-                        ZStack {
-                            TextField(isRoutine ? "Routine name..." : "Task name...", text: $title)
-                                .padding(12)
-                                .background(
+                        // Multi-line title input field with dynamic height
+                        ZStack(alignment: .leading) {
+                            // Use TextEditor instead of TextField for multi-line support
+                            TextEditor(text: $title)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .foregroundColor(.primary)
+                                .frame(minHeight: 44, maxHeight: 80)
+                                // Style the TextEditor to match other input fields
+                                .background(Color(.systemBackground)) // Match background color
+                                .overlay(
                                     RoundedRectangle(cornerRadius: 6)
                                         .stroke(Color.gray.opacity(0.5), lineWidth: 1)
                                 )
-                                .foregroundColor(.primary)
-                                .frame(height: 44)
                                 // Use SwiftUI's focus system
                                 .focused($focusedField, equals: .title)
                                 // Clear custom keyboard when native keyboard is shown
@@ -171,8 +175,20 @@ struct TaskFormView: View {
                                     if newValue == .title {
                                         // Using native keyboard, clear custom keyboard state
                                         activeField = nil
+                                        
+                                        // When we need to select all text on first focus for easy replacing
+                                        // This is handled by the system for TextEditor
                                     }
                                 }
+                            
+                            // Show placeholder text when empty
+                            if title.isEmpty {
+                                Text(isRoutine ? "Routine name..." : "Task name...")
+                                    .foregroundColor(Color.gray.opacity(0.8))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 12)
+                                    .allowsHitTesting(false)
+                            }
                             
                             // Add a transparent tap area to ensure focus and improve responsiveness
                             Color.clear
@@ -303,7 +319,10 @@ struct TaskFormView: View {
             .background(Color(.systemBackground))
         }
         .onAppear {
-            // Don't auto-focus title field so users can see all form options first
+            // Auto-focus the title field when the form appears
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.focusedField = .title
+            }
         }
         // Only show custom keyboard for numeric fields
         .fullScreenCover(item: $activeField) { field in

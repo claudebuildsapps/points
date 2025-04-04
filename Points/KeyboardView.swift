@@ -73,7 +73,7 @@ struct KeyboardView: View {
                     }
                     .background(
                         // Rounded edges only at the top
-                        RoundedCorners(tl: 15, tr: 15, bl: 0, br: 0)
+                        KeyboardRoundedCorners(tl: 15, tr: 15, bl: 0, br: 0)
                             .fill(colorScheme == .dark ? Color(.systemGray6) : Color(.systemBackground))
                             .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: -4)
                     )
@@ -119,8 +119,8 @@ struct KeyboardView: View {
     }
 }
 
-// Custom rounded corners shape
-struct RoundedCorners: Shape {
+// Custom rounded corners shape - renamed to avoid conflict
+struct KeyboardRoundedCorners: Shape {
     var tl: CGFloat = 0.0  // top-left radius
     var tr: CGFloat = 0.0  // top-right radius
     var bl: CGFloat = 0.0  // bottom-left radius
