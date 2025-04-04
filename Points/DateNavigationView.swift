@@ -151,21 +151,29 @@ struct DateNavigationView: View {
     var body: some View {
         VStack(spacing: 0) {
             // Date navigation bar
-            HStack {
-                // Left arrow button
-                navigationButton(direction: .backward)
+            HStack(spacing: 0) {
+                // Left arrow button container with fixed width
+                HStack {
+                    navigationButton(direction: .backward)
+                    Spacer()
+                }
+                .frame(width: 60, alignment: .leading)
                 
-                // Date display with formatted date, lighter & larger font
+                // Date display with fixed spacing - centered
                 Text(formattedDate())
                     .font(.headline.weight(.light))
                     .scaleEffect(1.2)
                     .foregroundColor(theme.textPrimary)
                     .frame(maxWidth: .infinity)
                 
-                // Right arrow button
-                navigationButton(direction: .forward)
+                // Right arrow button container with fixed width
+                HStack {
+                    Spacer()
+                    navigationButton(direction: .forward)
+                }
+                .frame(width: 60, alignment: .trailing)
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 8)
         }
         .onAppear {
             updateDateEntity()
@@ -228,7 +236,7 @@ struct DateNavigationView: View {
             Image(systemName: direction == .forward ? "chevron.right" : "chevron.left")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(theme.templateTab)
-                .frame(width: 44, height: 44)
+                .frame(width: 40, height: 40)
         }
         .helpMetadata(HelpMetadata(
             id: "date-navigation-\(direction == .forward ? "forward" : "back")",

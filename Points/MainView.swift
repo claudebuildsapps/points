@@ -439,17 +439,18 @@ struct TaskNavigationView: View {
             .environment(\.managedObjectContext, context)
             .frame(height: 45) // Further reduced height for compactness
             
-            // Compact container with minimal spacing
-            VStack(spacing: 0) {
-                // Full-width progress bar with daily target - no extra padding
+            // Compact container with minimal but consistent spacing
+            VStack(spacing: 2) { // Add a tiny 2pt gap for visual separation
+                // Full-width progress bar with daily target
                 ProgressBarView(progress: $progress)
                 
-                // Add the CreateTabsView directly below the progress bar - no gap
+                // Add the CreateTabsView below the progress bar with minimal spacing
                 CreateTabsView()
                     .environment(\.managedObjectContext, context)
                 
-                // Task list with absolutely no spacing
+                // Task list with minimal spacing
                 if let dateEntity = currentDateEntity {
+                    // Add a tiny bit of padding above task list for visual separation
                     TaskListContainer(
                         dateEntity: dateEntity,
                         onPointsUpdated: { points in
@@ -467,6 +468,7 @@ struct TaskNavigationView: View {
                             }
                         }
                     )
+                    .padding(.top, 1) // Add minimal padding for visual separation
                 }
             }
             

@@ -40,23 +40,27 @@ struct ProgressBarView: View {
                     let indicatorColor: Color = isOverTarget ? theme.dataTab : theme.templateTab
                     
                     // Background - full width rectangle with minimal rounding
-                    Rectangle()
-                        .fill(theme.progressBackground)
-                        .cornerRadius(2)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .helpMetadata(HelpMetadata(
-                            id: "progress-bar-base",
-                            title: "Progress Bar Background",
-                            description: "The gray background represents the full scale of possible points.",
-                            usageHints: [
-                                "The progress bar shows 0 to about 300 points",
-                                "Your daily target appears as a green vertical line"
-                            ],
-                            importance: .informational
-                        ))
+                    ZStack {
+                        Rectangle()
+                            .fill(theme.progressBackground)
+                            .cornerRadius(2)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                    }
+                    .contentShape(Rectangle()) // Ensure the entire area is tappable
+                    .helpMetadata(HelpMetadata(
+                        id: "progress-bar-base",
+                        title: "Progress Bar Background",
+                        description: "The gray background represents the full scale of possible points.",
+                        usageHints: [
+                            "The progress bar shows 0 to about 300 points",
+                            "Your daily target appears as a green vertical line"
+                        ],
+                        importance: .informational
+                    ))
                     
-                    Group {
-                        // Progress fill up to target - gold color
+                    // Progress fill up to target with proper alignment
+                    if progressWidth > 0 {
+                        // Gold progress section - properly aligned to left edge
                         Rectangle()
                             .fill(
                                 LinearGradient(
@@ -70,35 +74,40 @@ struct ProgressBarView: View {
                             )
                             .cornerRadius(2)
                             .frame(width: min(progressWidth, targetPosition), height: geometry.size.height)
-                            .helpMetadata(HelpMetadata(
-                                id: "progress-bar-to-target",
-                                title: "Progress to Target",
-                                description: "This gold section shows your progress toward your daily target.",
-                                usageHints: [
-                                    "Fills from left to right as you earn points",
-                                    "Turns completely gold when you reach your target"
-                                ],
-                                importance: .important
-                            ))
+                            .alignmentGuide(.leading) { _ in 0 } // Force alignment to left edge
+                            .contentShape(Rectangle())
+                        .helpMetadata(HelpMetadata(
+                            id: "progress-bar-to-target",
+                            title: "Progress to Target",
+                            description: "This gold section shows your progress toward your daily target.",
+                            usageHints: [
+                                "Fills from left to right as you earn points",
+                                "Turns completely gold when you reach your target"
+                            ],
+                            importance: .important
+                        ))
                         
                         // Additional progress beyond target - data tab color
                         if isOverTarget {
-                            Rectangle()
-                                .fill(theme.dataTab)
-                                .cornerRadius(2)
-                                .frame(width: progressWidth - targetPosition, height: geometry.size.height)
-                                .offset(x: targetPosition)
-                                .helpMetadata(HelpMetadata(
-                                    id: "progress-bar-beyond-target",
-                                    title: "Points Beyond Target",
-                                    description: "This blue section shows points earned beyond your daily target.",
-                                    usageHints: [
-                                        "Celebrates overachievement!",
-                                        "Shows how far you've exceeded your goal",
-                                        "Different color indicates bonus points"
-                                    ],
-                                    importance: .important
-                                ))
+                            ZStack {
+                                Rectangle()
+                                    .fill(theme.dataTab)
+                                    .cornerRadius(2)
+                                    .frame(width: progressWidth - targetPosition, height: geometry.size.height)
+                            }
+                            .position(x: (progressWidth - targetPosition) / 2 + targetPosition, y: geometry.size.height / 2)
+                            .contentShape(Rectangle())
+                            .helpMetadata(HelpMetadata(
+                                id: "progress-bar-beyond-target",
+                                title: "Points Beyond Target",
+                                description: "This blue section shows points earned beyond your daily target.",
+                                usageHints: [
+                                    "Celebrates overachievement!",
+                                    "Shows how far you've exceeded your goal",
+                                    "Different color indicates bonus points"
+                                ],
+                                importance: .important
+                            ))
                         }
                     }
                     
@@ -185,6 +194,8 @@ struct ProgressBarView: View {
                 }
             }
             .frame(height: 20) // Reduced height by 16.7%
+            // Apply a consistent Z-index to ensure proper layering in help mode
+            .zIndex(10) // Ensure progress bar is properly layered
         }
         .padding(.horizontal, 0) // No horizontal padding - truly full width
         .onAppear {
