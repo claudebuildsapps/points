@@ -70,12 +70,12 @@ struct TaskCellView: View {
                                 // Points value with "pts" label - bright white text for contrast
                                 VStack(spacing: 0) { // Vertical stack with minimal spacing
                                     Text("\(Int(task.points?.doubleValue ?? 0))")
-                                        .font(.system(size: 20, weight: .bold)) 
+                                        .font(.system(size: 16, weight: .bold)) // Reduced from 20 to 16
                                         .foregroundColor(.white) // Pure white for maximum contrast
                                         .fixedSize() // Prevent layout issues
                                     
                                     Text("pts")
-                                        .font(.system(size: 11, weight: .bold))
+                                        .font(.system(size: 10, weight: .bold)) // Reduced from 11 to 10
                                         .foregroundColor(.white) // Pure white
                                         .padding(.top, -2) // Tighten spacing
                                 }
@@ -123,14 +123,15 @@ struct TaskCellView: View {
                         ))
                     }
 
-                    // Task title only (removed date)
+                    // Task title - reduced font size and allowed two lines
                     VStack(alignment: .leading) {
                         Text(task.title ?? "Untitled")
-                            .font(.system(size: 20, weight: .medium))
+                            .font(.system(size: 16, weight: .medium)) // Reduced font size from 20 to 16
                             .foregroundColor(.primary)
-                            .lineLimit(1)
+                            .lineLimit(2) // Allow two lines instead of one
                             .truncationMode(.tail)
-                            .padding(.vertical, 4) // Add vertical padding to center text
+                            .fixedSize(horizontal: false, vertical: true) // Allow text to wrap naturally
+                            .padding(.vertical, 2) // Reduced padding to accommodate second line
                     }
                     .padding(.leading, 5) // Added padding to offset from edit button
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -156,7 +157,7 @@ struct TaskCellView: View {
                                 .shadow(color: theme.criticalColor.opacity(0.6), radius: 2, x: 0, y: 1)
                             
                             Image(systemName: "exclamationmark")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: 12, weight: .bold)) // Reduced from 14 to 12
                                 .foregroundColor(.white)
                         }
                         .padding(.horizontal, 4) // Add a small gap between indicator and slider
@@ -203,9 +204,9 @@ struct TaskCellView: View {
                                 .frame(width: circleSize, height: circleSize)
                                 .shadow(color: Color.black.opacity(0.3), radius: 2, x: 0, y: 1)
                             
-                            // Completion count with larger font
+                            // Completion count with consistent font size
                             Text("\(Int(task.completed))")
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 14, weight: .bold)) // Reduced from 16 to 14
                                 .foregroundColor(.white)
                         }
                         .offset(x: circleOffset)
