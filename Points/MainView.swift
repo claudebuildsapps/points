@@ -62,6 +62,7 @@ class TaskControllers: ObservableObject {
 struct MainView: View {
     @Environment(\.managedObjectContext) private var context
     @Environment(\.colorScheme) private var systemColorScheme
+    @Environment(\.theme) private var theme
     // Initialize with nil to force system setting
     @StateObject private var themeManager = ThemeManager(colorScheme: nil)
     @State private var selectedTab = 0
@@ -82,7 +83,7 @@ struct MainView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             // Main content that adjusts when help mode is active
             VStack(spacing: 0) {
                 // Direct help panel monitoring with compact design
@@ -129,6 +130,98 @@ struct MainView: View {
                 .frame(height: 0)
                 .padding(.bottom, 86) // Space for footer (44 for buttons + 42 for tabs)
                 }
+            }
+            
+            // Create a VStack for the floating + button
+            VStack {
+                Spacer()
+                
+                // Position the button to be above the footer
+                HStack {
+                    Spacer() // Push to right
+                    
+                    // Create Task Button
+                    Button(action: {
+                        // Set it to create a regular task
+                        self.createAsRoutine = false
+                        self.showCreateTaskSheet = true
+                    }) {
+                        ZStack {
+                            // Background circle with task tab color
+                            Circle()
+                                .fill(theme.tasksTab)
+                                .frame(width: 58, height: 58)
+                                .shadow(color: theme.tasksTab.opacity(0.6), radius: 4, x: 0, y: 2)
+                            
+                            // Plus icon in white
+                            Image(systemName: "plus")
+                                .font(.system(size: 30, weight: .medium))
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 90) // Position above the footer
+                    .buttonStyle(PlainButtonStyle())
+                    .helpMetadata(HelpMetadata(
+                        id: "quick-create-task-button",
+                        title: "Create Task",
+                        description: "Quickly create a new task",
+                        usageHints: [
+                            "Tap to create a regular task",
+                            "Uses the same form as +Task button",
+                            "Tasks appear in the task list for the current day"
+                        ],
+                        importance: .important
+                    ))
+                }
+            }
+            
+            // Form presentation for task creation
+            .sheet(isPresented: $showCreateTaskSheet) {
+                TaskFormView(
+                    mode: .create,
+                    task: nil,
+                    isPresented: $showCreateTaskSheet,
+                    initialIsRoutine: createAsRoutine,
+                    initialIsCritical: false,
+                    onSave: { values in
+                        // Extract values from the form
+                        let title = values["title"] as? String ?? (createAsRoutine ? "New Routine" : "New Task")
+                        let points = values["points"] as? NSDecimalNumber ?? 
+                            NSDecimalNumber(value: createAsRoutine ? 3.0 : Constants.Defaults.taskPoints)
+                        let target = values["target"] as? Int16 ?? Int16(Constants.Defaults.taskTarget)
+                        let reward = values["reward"] as? NSDecimalNumber ?? 
+                            NSDecimalNumber(value: createAsRoutine ? 1.0 : 0.0)
+                        let max = values["max"] as? Int16 ?? Int16(Constants.Defaults.taskMax)
+                        let isRoutine = values["routine"] as? Bool ?? createAsRoutine
+                        let isOptional = values["optional"] as? Bool ?? true
+                        let isCritical = values["critical"] as? Bool ?? false
+                        
+                        // Create the task using task manager
+                        let newTask = taskControllers.taskManager?.createTask(
+                            title: title,
+                            points: points,
+                            target: target,
+                            date: taskControllers.currentDateEntity,
+                            reward: reward,
+                            max: max,
+                            routine: isRoutine,
+                            optional: isOptional,
+                            critical: isCritical
+                        )
+                        
+                        // Notify that the task list has changed
+                        NotificationCenter.default.post(
+                            name: Constants.Notifications.taskListChanged,
+                            object: nil,
+                            userInfo: ["task": newTask as Any]
+                        )
+                    },
+                    onCancel: {
+                        // Just dismiss
+                        showCreateTaskSheet = false
+                    }
+                )
             }
             
             // Footer at the bottom (now includes both buttons and tabs)
@@ -410,6 +503,7 @@ struct TaskNavigationView: View {
     @State private var currentDateEntity: CoreDataDate?
     @State private var progress: Float = 0
     @State private var forceProgressBarUpdate: UUID = UUID() // Add a state variable to force UI updates
+    @State private var showAppMenu = false // State for showing app menu
     
     // Add a separate state for UI display of points that can animate independently
     @State private var displayedPoints: Int = 0
@@ -421,7 +515,69 @@ struct TaskNavigationView: View {
     var body: some View {
         // Using zero spacing to ensure elements touch with no gaps
         VStack(spacing: 0) {
-            // Date navigation at the top
+            // App header with hamburger menu
+            HStack {
+                Text("Points")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(theme.textPrimary)
+                
+                Spacer()
+                
+                Button(action: {
+                    showAppMenu.toggle()
+                }) {
+                    // Custom stacked hamburger icon with more spacing between lines
+                    VStack(spacing: 6) { // Increased spacing between lines
+                        ForEach(0..<3) { _ in
+                            Rectangle()
+                                .frame(width: 22, height: 2) // Slightly wider and thinner lines
+                                .foregroundColor(theme.textPrimary)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 8)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+                .helpMetadata(HelpMetadata(
+                    id: "app-menu-button",
+                    title: "App Menu",
+                    description: "Opens the app menu with additional options and settings.",
+                    usageHints: [
+                        "Access app settings and preferences",
+                        "Find additional tools and options",
+                        "Quick access to app features"
+                    ],
+                    importance: .informational
+                ))
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 44) // Increased height for app header
+            .background(theme.routinesTab.opacity(0.1)) // Subtle background to distinguish from date nav
+            
+            // App menu (shown as an actionsheet when hamburger is tapped)
+            .actionSheet(isPresented: $showAppMenu) {
+                ActionSheet(
+                    title: Text("Points Menu"),
+                    buttons: [
+                        .default(Text("Settings")) {
+                            // Settings action (placeholder)
+                            print("Settings tapped")
+                        },
+                        .default(Text("About")) {
+                            // About action (placeholder)
+                            print("About tapped")
+                        },
+                        .default(Text("Help")) {
+                            // Toggle help mode
+                            HelpSystem.shared.toggleHelpMode()
+                        },
+                        .cancel()
+                    ]
+                )
+            }
+            
+            // Date navigation below app header
             DateNavigationView(onDateChange: { dateEntity in
                 self.currentDateEntity = dateEntity
                 
@@ -451,7 +607,7 @@ struct TaskNavigationView: View {
                 }
             })
             .environment(\.managedObjectContext, context)
-            .frame(height: 45) // Further reduced height for compactness
+            .frame(height: 45) // Maintained same height for date navigation
             
             // Compact container with minimal but consistent spacing
             VStack(spacing: 2) { // Add a tiny 2pt gap for visual separation
@@ -580,4 +736,5 @@ struct TaskNavigationView: View {
             }
         }
     }
+    
 }
