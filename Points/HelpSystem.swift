@@ -232,6 +232,13 @@ struct HelpOverlayModifier: ViewModifier {
                         RoundedRectangle(cornerRadius: 4)
                             .stroke(Color.blue, lineWidth: 3)
                             .zIndex(99) // Below the tap area but above content
+                            
+                        // Extra highlight for pill-shaped elements like points and target bubbles
+                        if metadata.id == "points-indicator" || metadata.id == "target-indicator" {
+                            Capsule()
+                                .stroke(Color.blue, lineWidth: 3)
+                                .zIndex(99)
+                        }
                     }
                 }
             }

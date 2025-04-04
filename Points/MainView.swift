@@ -441,8 +441,9 @@ struct TaskNavigationView: View {
             
             // Compact container with minimal but consistent spacing
             VStack(spacing: 2) { // Add a tiny 2pt gap for visual separation
-                // Full-width progress bar with daily target
+                // Full-width progress bar with daily target - dropped down by 10px
                 ProgressBarView(progress: $progress)
+                    .padding(.top, 10) // Drop the entire progress bar down by 10px
                 
                 // Add the CreateTabsView below the progress bar with minimal spacing
                 CreateTabsView()
