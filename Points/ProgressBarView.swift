@@ -49,6 +49,8 @@ struct ProgressBarView: View {
             // Apply a consistent Z-index to ensure proper layering in help mode
             .zIndex(10) // Ensure progress bar is properly layered
             // Removed implicit animation - relying on explicit withAnimation for better control
+            .padding(.top, 15) // Add top padding to push progress bar down and make room for bubbles
+            .padding(.bottom, 10) // Add bottom padding for spacing below the progress bar
         }
         .padding(.horizontal, 0) // No horizontal padding - truly full width
         .onAppear {
@@ -417,7 +419,7 @@ struct ProgressBarView: View {
             // Target decoration
             Rectangle()
                 .fill(darkGreenColor)
-                .frame(width: 3, height: geometry.size.height + 10)
+                .frame(width: 3, height: geometry.size.height + 20) // Increased to match larger vertical offset
             
             ZStack {
                 // Main content - unaffected by help mode
@@ -490,7 +492,7 @@ struct ProgressBarView: View {
                         }
                 }
             }
-            .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
+            .offset(y: -30) // Increased downward offset to avoid overlapping with date row
         }
         .position(x: targetPosition, y: geometry.size.height / 2)
     }
@@ -501,7 +503,7 @@ struct ProgressBarView: View {
             // Points decoration line
             Rectangle()
                 .fill(indicatorColor)
-                .frame(width: 3, height: geometry.size.height + 10)
+                .frame(width: 3, height: geometry.size.height + 20) // Increased to match larger vertical offset
             
             ZStack {
                 // Current points bubble - main content
@@ -570,7 +572,7 @@ struct ProgressBarView: View {
                         }
                 }
             }
-            .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
+            .offset(y: -30) // Increased downward offset to match target display and avoid overlap
         }
         .position(x: displayPoints > 0 ? indicatorPosition : 0, y: geometry.size.height / 2) // Place at far left (0) when points are 0
     }
