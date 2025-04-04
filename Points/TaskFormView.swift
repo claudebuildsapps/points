@@ -119,25 +119,128 @@ struct TaskFormView: View {
                 HStack(spacing: 12) {
                     // Copy to Template button - only show in edit mode for non-template tasks
                     if mode == .edit && onCopyToTemplate != nil && task != nil && !task!.template && task!.date != nil {
-                        Button(action: {
-                            checkForDuplicateTemplate()
-                        }) {
-                            Image(systemName: "doc.on.doc")
-                                .font(.system(size: 18))
-                                .foregroundColor(isDuplicateTemplate ? .gray : theme.templateTab)
+                        ZStack {
+                            Button(action: {
+                                // Only trigger if not in help mode
+                                if !HelpSystem.shared.isHelpModeActive {
+                                    checkForDuplicateTemplate()
+                                }
+                            }) {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(isDuplicateTemplate ? .gray : theme.templateTab)
+                            }
+                            .disabled(isDuplicateTemplate || HelpSystem.shared.isHelpModeActive)
+                            
+                            // Help mode overlay
+                            if HelpSystem.shared.isHelpModeActive {
+                                // Transparent button for help mode
+                                Button(action: {
+                                    HelpSystem.shared.highlightElement("button-template")
+                                }) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.001))
+                                        .frame(width: 40, height: 40)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .zIndex(100)
+                                
+                                // Show highlight when specifically highlighted
+                                if HelpSystem.shared.isElementHighlighted("button-template") {
+                                    Circle()
+                                        .stroke(Color.blue, lineWidth: 2)
+                                        .frame(width: 36, height: 36)
+                                        .zIndex(99)
+                                }
+                            }
                         }
-                        .disabled(isDuplicateTemplate)
+                        .overlay(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        HelpSystem.shared.registerElement(
+                                            id: "button-template",
+                                            metadata: HelpMetadata(
+                                                id: "button-template",
+                                                title: "Template Button",
+                                                description: "Copies this task as a reusable template",
+                                                usageHints: [
+                                                    "Creates a copy in the Templates tab",
+                                                    "Preserves all settings and values",
+                                                    "Templates can be used to create new tasks quickly",
+                                                    "Gray when template already exists with same name"
+                                                ],
+                                                importance: .informational
+                                            ),
+                                            frame: geo.frame(in: .global)
+                                        )
+                                    }
+                            }
+                        )
                     }
                     
                     // Delete button - only show in edit mode
                     if mode == .edit && onDelete != nil {
-                        Button(action: {
-                            showDeleteConfirmation = true
-                        }) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 18))
-                                .foregroundColor(.red)
+                        ZStack {
+                            Button(action: {
+                                // Only trigger if not in help mode
+                                if !HelpSystem.shared.isHelpModeActive {
+                                    showDeleteConfirmation = true
+                                }
+                            }) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.red)
+                            }
+                            .disabled(HelpSystem.shared.isHelpModeActive)
+                            
+                            // Help mode overlay
+                            if HelpSystem.shared.isHelpModeActive {
+                                // Transparent button for help mode
+                                Button(action: {
+                                    HelpSystem.shared.highlightElement("button-delete")
+                                }) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.001))
+                                        .frame(width: 40, height: 40)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .zIndex(100)
+                                
+                                // Show highlight when specifically highlighted
+                                if HelpSystem.shared.isElementHighlighted("button-delete") {
+                                    Circle()
+                                        .stroke(Color.blue, lineWidth: 2)
+                                        .frame(width: 36, height: 36)
+                                        .zIndex(99)
+                                }
+                            }
                         }
+                        .overlay(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        HelpSystem.shared.registerElement(
+                                            id: "button-delete",
+                                            metadata: HelpMetadata(
+                                                id: "button-delete",
+                                                title: "Delete Button",
+                                                description: "Permanently removes this task",
+                                                usageHints: [
+                                                    "Shows confirmation before deleting",
+                                                    "Cannot be undone",
+                                                    "Removes all completion history",
+                                                    "Points earned from this task remain"
+                                                ],
+                                                importance: .important
+                                            ),
+                                            frame: geo.frame(in: .global)
+                                        )
+                                    }
+                            }
+                        )
                     }
                 }
                 .padding(.trailing, 16)
@@ -180,6 +283,8 @@ struct TaskFormView: View {
                                         // This is handled by the system for TextEditor
                                     }
                                 }
+                                // Disable in help mode
+                                .disabled(HelpSystem.shared.isHelpModeActive)
                             
                             // Show placeholder text when empty
                             if title.isEmpty {
@@ -191,13 +296,60 @@ struct TaskFormView: View {
                             }
                             
                             // Add a transparent tap area to ensure focus and improve responsiveness
-                            Color.clear
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    focusedField = .title
-                                    activeField = nil
+                            if !HelpSystem.shared.isHelpModeActive {
+                                Color.clear
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        focusedField = .title
+                                        activeField = nil
+                                    }
+                            }
+                            
+                            // Help mode overlay
+                            if HelpSystem.shared.isHelpModeActive {
+                                // Transparent button for help mode
+                                Button(action: {
+                                    HelpSystem.shared.highlightElement("field-task-name")
+                                }) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.001))
+                                        .contentShape(Rectangle())
                                 }
+                                .buttonStyle(PlainButtonStyle())
+                                .zIndex(100)
+                                
+                                // Show highlight when specifically highlighted
+                                if HelpSystem.shared.isElementHighlighted("field-task-name") {
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color.blue, lineWidth: 2)
+                                        .zIndex(99)
+                                }
+                            }
                         }
+                        // Register with help system
+                        .overlay(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        HelpSystem.shared.registerElement(
+                                            id: "field-task-name",
+                                            metadata: HelpMetadata(
+                                                id: "field-task-name",
+                                                title: isRoutine ? "Routine Name Field" : "Task Name Field",
+                                                description: "Enter a descriptive name for this item",
+                                                usageHints: [
+                                                    "Tap to enter text with the keyboard",
+                                                    "Be specific to easily identify this item",
+                                                    "Supports multiple lines for longer descriptions",
+                                                    "The name will appear in your task list"
+                                                ],
+                                                importance: .important
+                                            ),
+                                            frame: geo.frame(in: .global)
+                                        )
+                                    }
+                            }
+                        )
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
@@ -248,26 +400,170 @@ struct TaskFormView: View {
                     
                     // Routine and Optional
                     VStack(spacing: 16) {
-                        Toggle(isOn: $isRoutine) {
-                            Text("Routine")
-                                .font(.system(size: 16))
-                                .foregroundColor(.primary)
+                        // Routine toggle with help system integration
+                        ZStack {
+                            Toggle(isOn: $isRoutine) {
+                                Text("Routine")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.primary)
+                            }
+                            .toggleStyle(SwitchToggleStyle(tint: .green))
+                            .disabled(HelpSystem.shared.isHelpModeActive)
+                            
+                            // Help mode overlay
+                            if HelpSystem.shared.isHelpModeActive {
+                                // Transparent button for help mode
+                                Button(action: {
+                                    HelpSystem.shared.highlightElement("toggle-routine")
+                                }) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.001))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .zIndex(100)
+                                
+                                // Show highlight when specifically highlighted
+                                if HelpSystem.shared.isElementHighlighted("toggle-routine") {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.blue, lineWidth: 2)
+                                        .zIndex(99)
+                                }
+                            }
                         }
-                        .toggleStyle(SwitchToggleStyle(tint: .green))
+                        .overlay(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        HelpSystem.shared.registerElement(
+                                            id: "toggle-routine",
+                                            metadata: HelpMetadata(
+                                                id: "toggle-routine",
+                                                title: "Routine Toggle",
+                                                description: "Switch between Task and Routine types",
+                                                usageHints: [
+                                                    "ON: Creates a recurring routine for building habits",
+                                                    "OFF: Creates a one-time task for to-do items",
+                                                    "Routines typically have lower point values",
+                                                    "Routines often have higher target values"
+                                                ],
+                                                importance: .important
+                                            ),
+                                            frame: geo.frame(in: .global)
+                                        )
+                                    }
+                            }
+                        )
                         
-                        Toggle(isOn: $isOptional) {
-                            Text("Optional")
-                                .font(.system(size: 16))
-                                .foregroundColor(.primary)
+                        // Optional toggle with help system integration
+                        ZStack {
+                            Toggle(isOn: $isOptional) {
+                                Text("Optional")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.primary)
+                            }
+                            .toggleStyle(SwitchToggleStyle(tint: .blue))
+                            .disabled(HelpSystem.shared.isHelpModeActive)
+                            
+                            // Help mode overlay
+                            if HelpSystem.shared.isHelpModeActive {
+                                // Transparent button for help mode
+                                Button(action: {
+                                    HelpSystem.shared.highlightElement("toggle-optional")
+                                }) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.001))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .zIndex(100)
+                                
+                                // Show highlight when specifically highlighted
+                                if HelpSystem.shared.isElementHighlighted("toggle-optional") {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.blue, lineWidth: 2)
+                                        .zIndex(99)
+                                }
+                            }
                         }
-                        .toggleStyle(SwitchToggleStyle(tint: .blue))
+                        .overlay(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        HelpSystem.shared.registerElement(
+                                            id: "toggle-optional",
+                                            metadata: HelpMetadata(
+                                                id: "toggle-optional",
+                                                title: "Optional Toggle",
+                                                description: "Marks a task as optional or required",
+                                                usageHints: [
+                                                    "ON: Task is optional and can be skipped",
+                                                    "OFF: Task is required for daily completion",
+                                                    "Optional tasks don't affect your streak",
+                                                    "Use required for essential daily habits"
+                                                ],
+                                                importance: .informational
+                                            ),
+                                            frame: geo.frame(in: .global)
+                                        )
+                                    }
+                            }
+                        )
                         
-                        Toggle(isOn: $isCritical) {
-                            Text("Critical")
-                                .font(.system(size: 16))
-                                .foregroundColor(.primary)
+                        // Critical toggle with help system integration
+                        ZStack {
+                            Toggle(isOn: $isCritical) {
+                                Text("Critical")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.primary)
+                            }
+                            .toggleStyle(SwitchToggleStyle(tint: .orange))
+                            .disabled(HelpSystem.shared.isHelpModeActive)
+                            
+                            // Help mode overlay
+                            if HelpSystem.shared.isHelpModeActive {
+                                // Transparent button for help mode
+                                Button(action: {
+                                    HelpSystem.shared.highlightElement("toggle-critical")
+                                }) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.001))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .zIndex(100)
+                                
+                                // Show highlight when specifically highlighted
+                                if HelpSystem.shared.isElementHighlighted("toggle-critical") {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.blue, lineWidth: 2)
+                                        .zIndex(99)
+                                }
+                            }
                         }
-                        .toggleStyle(SwitchToggleStyle(tint: .orange))
+                        .overlay(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        HelpSystem.shared.registerElement(
+                                            id: "toggle-critical",
+                                            metadata: HelpMetadata(
+                                                id: "toggle-critical",
+                                                title: "Critical Toggle",
+                                                description: "Marks a task as high priority",
+                                                usageHints: [
+                                                    "ON: Task is highlighted as critical",
+                                                    "OFF: Task has normal priority",
+                                                    "Critical tasks are visually distinct",
+                                                    "Use for important tasks that need attention"
+                                                ],
+                                                importance: .important
+                                            ),
+                                            frame: geo.frame(in: .global)
+                                        )
+                                    }
+                            }
+                        )
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
@@ -281,37 +577,140 @@ struct TaskFormView: View {
                 Divider()
                 
                 HStack(spacing: 16) {
-                    // Cancel button
-                    Button(action: {
-                        activeField = nil
-                        onCancel()
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Text("Cancel")
-                            .font(.system(size: 17))
-                            .foregroundColor(.red)
-                            .padding(.vertical, 16)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.red.opacity(0.1))
-                            .cornerRadius(10)
+                    // Cancel button with help integration
+                    ZStack {
+                        // Cancel button
+                        Button(action: {
+                            // Only trigger normal action if not in help mode
+                            if !HelpSystem.shared.isHelpModeActive {
+                                activeField = nil
+                                onCancel()
+                                presentationMode.wrappedValue.dismiss()
+                            }
+                        }) {
+                            Text("Cancel")
+                                .font(.system(size: 17))
+                                .foregroundColor(.red)
+                                .padding(.vertical, 16)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.red.opacity(0.1))
+                                .cornerRadius(10)
+                        }
+                        
+                        // Help mode overlay
+                        if HelpSystem.shared.isHelpModeActive {
+                            // Transparent button for help mode
+                            Button(action: {
+                                HelpSystem.shared.highlightElement("button-cancel")
+                            }) {
+                                Rectangle()
+                                    .fill(Color.white.opacity(0.001))
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .zIndex(100)
+                            
+                            // Show highlight when specifically highlighted
+                            if HelpSystem.shared.isElementHighlighted("button-cancel") {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.blue, lineWidth: 2)
+                                    .zIndex(99)
+                            }
+                        }
                     }
+                    .overlay(
+                        GeometryReader { geo in
+                            Color.clear
+                                .onAppear {
+                                    HelpSystem.shared.registerElement(
+                                        id: "button-cancel",
+                                        metadata: HelpMetadata(
+                                            id: "button-cancel",
+                                            title: "Cancel Button",
+                                            description: "Discard changes and close the form",
+                                            usageHints: [
+                                                "Tap to exit without saving",
+                                                "All form changes will be lost",
+                                                "No confirmation is shown"
+                                            ],
+                                            importance: .informational
+                                        ),
+                                        frame: geo.frame(in: .global)
+                                    )
+                                }
+                        }
+                    )
                     
-                    // Save/Create button
-                    Button(action: {
-                        activeField = nil
-                        onSave(prepareValuesForSave())
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Text(mode == .create 
-                            ? (isRoutine ? "Create Routine" : "Create Task") 
-                            : "Save")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 16)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.green)
-                            .cornerRadius(10)
+                    // Save/Create button with help integration
+                    ZStack {
+                        // Save/Create button
+                        Button(action: {
+                            // Only trigger normal action if not in help mode
+                            if !HelpSystem.shared.isHelpModeActive {
+                                activeField = nil
+                                onSave(prepareValuesForSave())
+                                presentationMode.wrappedValue.dismiss()
+                            }
+                        }) {
+                            Text(mode == .create 
+                                ? (isRoutine ? "Create Routine" : "Create Task") 
+                                : "Save")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.vertical, 16)
+                                .frame(maxWidth: .infinity)
+                                .background(Color.green)
+                                .cornerRadius(10)
+                        }
+                        
+                        // Help mode overlay
+                        if HelpSystem.shared.isHelpModeActive {
+                            // Transparent button for help mode
+                            Button(action: {
+                                HelpSystem.shared.highlightElement("button-save")
+                            }) {
+                                Rectangle()
+                                    .fill(Color.white.opacity(0.001))
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .zIndex(100)
+                            
+                            // Show highlight when specifically highlighted
+                            if HelpSystem.shared.isElementHighlighted("button-save") {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.blue, lineWidth: 2)
+                                    .zIndex(99)
+                            }
+                        }
                     }
+                    .overlay(
+                        GeometryReader { geo in
+                            Color.clear
+                                .onAppear {
+                                    let buttonTitle = mode == .create 
+                                        ? (isRoutine ? "Create Routine" : "Create Task") 
+                                        : "Save"
+                                        
+                                    HelpSystem.shared.registerElement(
+                                        id: "button-save",
+                                        metadata: HelpMetadata(
+                                            id: "button-save",
+                                            title: buttonTitle,
+                                            description: mode == .create ? "Create a new item" : "Save changes to existing item",
+                                            usageHints: [
+                                                "Tap to save all field values",
+                                                "Creates a new item on today's date",
+                                                "All fields must have valid values",
+                                                "Task will appear immediately in your list"
+                                            ],
+                                            importance: .important
+                                        ),
+                                        frame: geo.frame(in: .global)
+                                    )
+                                }
+                        }
+                    )
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 16)

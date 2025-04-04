@@ -70,47 +70,196 @@ struct CustomNumericKeyboard: View {
                 HStack(spacing: 12) { // Increased spacing between buttons
                     // Cancel or Clear button
                     if showCancelButton && onCancel != nil {
-                        // Cancel button that discards changes
-                        Button(action: {
-                            if let onCancel = onCancel {
-                                onCancel()
+                        // Cancel button that discards changes with help integration
+                        ZStack {
+                            Button(action: {
+                                // Only trigger if not in help mode
+                                if !HelpSystem.shared.isHelpModeActive {
+                                    if let onCancel = onCancel {
+                                        onCancel()
+                                    }
+                                }
+                            }) {
+                                Text("Cancel")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.red)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 60)
+                                    .background(Color.red.opacity(0.1))
+                                    .cornerRadius(8)
                             }
-                        }) {
-                            Text("Cancel")
-                                .font(.system(size: 20))
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 60)
-                                .background(Color.red.opacity(0.1))
-                                .cornerRadius(8)
+                            .disabled(HelpSystem.shared.isHelpModeActive)
+                            
+                            // Help mode overlay
+                            if HelpSystem.shared.isHelpModeActive {
+                                // Transparent button for help mode
+                                Button(action: {
+                                    HelpSystem.shared.highlightElement("keyboard-cancel-button")
+                                }) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.001))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .zIndex(100)
+                                
+                                // Show highlight when specifically highlighted
+                                if HelpSystem.shared.isElementHighlighted("keyboard-cancel-button") {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.blue, lineWidth: 2)
+                                        .zIndex(99)
+                                }
+                            }
                         }
+                        .overlay(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        HelpSystem.shared.registerElement(
+                                            id: "keyboard-cancel-button",
+                                            metadata: HelpMetadata(
+                                                id: "keyboard-cancel-button",
+                                                title: "Cancel Button",
+                                                description: "Discards changes to the numeric field",
+                                                usageHints: [
+                                                    "Tap to exit without saving changes",
+                                                    "Restores the previous value",
+                                                    "Returns to the task form"
+                                                ],
+                                                importance: .informational
+                                            ),
+                                            frame: geo.frame(in: .global)
+                                        )
+                                    }
+                            }
+                        )
                         .padding(.leading, 8) // Add padding to push away from edge
                     } else {
-                        // Clear button
-                        Button(action: {
-                            text = ""  // Just clear the text
-                        }) {
-                            Text("Clear")
-                                .font(.system(size: 20))
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 60)
-                                .background(Color.red.opacity(0.1))
-                                .cornerRadius(8)
+                        // Clear button with help integration
+                        ZStack {
+                            Button(action: {
+                                // Only trigger if not in help mode
+                                if !HelpSystem.shared.isHelpModeActive {
+                                    text = ""  // Just clear the text
+                                }
+                            }) {
+                                Text("Clear")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.red)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 60)
+                                    .background(Color.red.opacity(0.1))
+                                    .cornerRadius(8)
+                            }
+                            .disabled(HelpSystem.shared.isHelpModeActive)
+                            
+                            // Help mode overlay
+                            if HelpSystem.shared.isHelpModeActive {
+                                // Transparent button for help mode
+                                Button(action: {
+                                    HelpSystem.shared.highlightElement("keyboard-clear-button")
+                                }) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.001))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .zIndex(100)
+                                
+                                // Show highlight when specifically highlighted
+                                if HelpSystem.shared.isElementHighlighted("keyboard-clear-button") {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.blue, lineWidth: 2)
+                                        .zIndex(99)
+                                }
+                            }
                         }
+                        .overlay(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        HelpSystem.shared.registerElement(
+                                            id: "keyboard-clear-button",
+                                            metadata: HelpMetadata(
+                                                id: "keyboard-clear-button",
+                                                title: "Clear Button",
+                                                description: "Clears the current value",
+                                                usageHints: [
+                                                    "Tap to reset to empty value",
+                                                    "Start fresh with a new value",
+                                                    "Sets to 0 when saved"
+                                                ],
+                                                importance: .informational
+                                            ),
+                                            frame: geo.frame(in: .global)
+                                        )
+                                    }
+                            }
+                        )
                         .padding(.leading, 8) // Add padding to push away from edge
                     }
                     
-                    // Done button
-                    Button(action: onDone) {
-                        Text("Done")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 60)
-                            .background(Color.blue)
-                            .cornerRadius(8)
+                    // Done button with help integration
+                    ZStack {
+                        Button(action: {
+                            // Only trigger if not in help mode
+                            if !HelpSystem.shared.isHelpModeActive {
+                                onDone()
+                            }
+                        }) {
+                            Text("Done")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 60)
+                                .background(Color.blue)
+                                .cornerRadius(8)
+                        }
+                        .disabled(HelpSystem.shared.isHelpModeActive)
+                        
+                        // Help mode overlay
+                        if HelpSystem.shared.isHelpModeActive {
+                            // Transparent button for help mode
+                            Button(action: {
+                                HelpSystem.shared.highlightElement("keyboard-done-button")
+                            }) {
+                                Rectangle()
+                                    .fill(Color.white.opacity(0.001))
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .zIndex(100)
+                            
+                            // Show highlight when specifically highlighted
+                            if HelpSystem.shared.isElementHighlighted("keyboard-done-button") {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.blue, lineWidth: 2)
+                                    .zIndex(99)
+                            }
+                        }
                     }
+                    .overlay(
+                        GeometryReader { geo in
+                            Color.clear
+                                .onAppear {
+                                    HelpSystem.shared.registerElement(
+                                        id: "keyboard-done-button",
+                                        metadata: HelpMetadata(
+                                            id: "keyboard-done-button",
+                                            title: "Done Button",
+                                            description: "Confirms and saves the numeric value",
+                                            usageHints: [
+                                                "Tap to apply the entered value",
+                                                "Closes the keyboard",
+                                                "Returns to the task form"
+                                            ],
+                                            importance: .important
+                                        ),
+                                        frame: geo.frame(in: .global)
+                                    )
+                                }
+                        }
+                    )
                     .padding(.trailing, 8) // Add padding to push away from edge
                 }
             }
