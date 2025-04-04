@@ -65,6 +65,7 @@ struct TabBarView: View {
                         .background(getTabColor(index: index))
                         // Remove border overlay to make tabs completely adjacent
                 }
+                .helpMetadata(getTabHelpMetadata(index: index))
                 
                 // Remove dividers between tabs to make them completely adjacent
             }
@@ -77,6 +78,85 @@ struct TabBarView: View {
     // MARK: - Methods
     private func handleTabSelection(index: Int) {
         onTabSelected(index)
+    }
+    
+    // Helper to get the appropriate help metadata for each tab
+    private func getTabHelpMetadata(index: Int) -> HelpMetadata {
+        switch index {
+        case 0:
+            return HelpMetadata(
+                id: "routines-tab",
+                title: "Routines Tab",
+                description: "Manage your recurring routines and habits.",
+                usageHints: [
+                    "Tap once to filter and show only routines",
+                    "Tap again to show all tasks and routines",
+                    "Routines are designed to be completed regularly",
+                    "Routines reset each day automatically"
+                ],
+                importance: .important
+            )
+        case 1:
+            return HelpMetadata(
+                id: "tasks-tab",
+                title: "Tasks Tab",
+                description: "Manage your one-time tasks and to-dos.",
+                usageHints: [
+                    "Tap once to filter and show only tasks",
+                    "Tap again to show all tasks and routines",
+                    "Tasks are one-time items to complete",
+                    "Critical tasks are highlighted with an exclamation mark"
+                ],
+                importance: .important
+            )
+        case 2:
+            return HelpMetadata(
+                id: "templates-tab",
+                title: "Templates Tab",
+                description: "Create and manage reusable task templates.",
+                usageHints: [
+                    "Save frequently used tasks as templates",
+                    "Create new tasks from existing templates",
+                    "Templates help you quickly add similar tasks",
+                    "Organize your common activities for easy access"
+                ],
+                importance: .informational
+            )
+        case 3:
+            return HelpMetadata(
+                id: "summary-tab",
+                title: "Summary Tab",
+                description: "View statistics and progress summaries.",
+                usageHints: [
+                    "Track your overall productivity trends",
+                    "See daily, weekly, and monthly stats",
+                    "Monitor completion rates and points earned",
+                    "Analyze your productivity patterns"
+                ],
+                importance: .informational
+            )
+        case 4:
+            return HelpMetadata(
+                id: "data-tab",
+                title: "Data Tab",
+                description: "Access and manage your app data.",
+                usageHints: [
+                    "Export or import your task data",
+                    "Reset or clear persistent data",
+                    "Access advanced data management tools",
+                    "Backup your important information"
+                ],
+                importance: .informational
+            )
+        default:
+            return HelpMetadata(
+                id: "tab-\(index)",
+                title: "Tab \(index)",
+                description: "Navigation tab.",
+                usageHints: ["Tap to navigate to this section"],
+                importance: .informational
+            )
+        }
     }
 }
 

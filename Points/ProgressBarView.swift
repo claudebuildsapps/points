@@ -29,196 +29,18 @@ struct ProgressBarView: View {
         self.actualPoints = actualPoints
     }
     
+    // Split body into smaller pieces to help the compiler
     var body: some View {
         // Compact progress bar with no extra spacing
+        progressBarContent
+    }
+    
+    // Main container
+    private var progressBarContent: some View {
         VStack(spacing: 0) {
             // Full-width rectangular progress bar with target indicator
             GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    // Calculate positions and values
-                    let targetRatio = CGFloat(dailyTarget) / 150.0
-                    let targetPosition = min(geometry.size.width * 0.75, geometry.size.width * targetRatio)
-                    let progressWidth = geometry.size.width * CGFloat(progress)
-                    let isOverTarget = progressWidth > targetPosition
-                    
-                    // Use the animated points value for smooth transitions
-                    let displayPoints: Int = Int(animatedPointsValue.rounded())
-                    
-                    // Create an animating number formatter
-                    var formatter: NumberFormatter = {
-                        let f = NumberFormatter()
-                        f.numberStyle = .decimal
-                        f.maximumFractionDigits = 0
-                        return f
-                    }()
-                    
-                    // Calculate indicator position based on animated points, not progress width
-                    let targetRatioFloat = Float(dailyTarget) / 150.0 // Same scaling as in target position calculation
-                    let pointsProgressRatio = min(Float(animatedPointsValue) / Float(dailyTarget), 1.0)
-                    let normalizedProgress = pointsProgressRatio * targetRatioFloat
-                    
-                    // Calculate position as a direct mapping of points to width
-                    let indicatorPosition = min(CGFloat(normalizedProgress) * geometry.size.width, geometry.size.width - 24) // Prevent overflow
-                    let indicatorColor: Color = displayPoints >= dailyTarget ? theme.dataTab : theme.templateTab
-                    
-                    // Background - full width rectangle with minimal rounding
-                    ZStack {
-                        Rectangle()
-                            .fill(theme.progressBackground)
-                            .cornerRadius(2)
-                            .frame(width: geometry.size.width, height: geometry.size.height)
-                    }
-                    .contentShape(Rectangle()) // Ensure the entire area is tappable
-                    .helpMetadata(HelpMetadata(
-                        id: "progress-bar-base",
-                        title: "Progress Bar Background",
-                        description: "The gray background represents the full scale of possible points.",
-                        usageHints: [
-                            "The progress bar shows 0 to about 300 points",
-                            "Your daily target appears as a green vertical line"
-                        ],
-                        importance: .informational
-                    ))
-                    
-                    // Progress fill up to target - calculate width based on actual points
-                    let actualProgressWidth = CGFloat(normalizedProgress) * geometry.size.width
-                    
-                    // Gold progress section - properly aligned to left edge
-                    Rectangle()
-                        .fill(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    theme.templateTab,
-                                    theme.templateTab.opacity(0.85)
-                                ]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(2)
-                        .frame(width: min(max(0, actualProgressWidth), targetPosition), height: geometry.size.height)
-                        .alignmentGuide(.leading) { _ in 0 } // Force alignment to left edge
-                        // Removed per-element animation in favor of parent withAnimation
-                        .contentShape(Rectangle())
-                    .helpMetadata(HelpMetadata(
-                        id: "progress-bar-to-target",
-                        title: "Progress to Target",
-                        description: "This gold section shows your progress toward your daily target.",
-                        usageHints: [
-                            "Fills from left to right as you earn points",
-                            "Turns completely gold when you reach your target"
-                        ],
-                        importance: .important
-                    ))
-                    
-                    // Additional progress beyond target - data tab color
-                    if animatedPointsValue > Double(dailyTarget) {
-                        // Calculate width based on animated points value
-                        let beyondTargetRatio = min(Float(animatedPointsValue - Double(dailyTarget)) / 150.0, 1.0)
-                        let beyondTargetWidth = CGFloat(beyondTargetRatio) * geometry.size.width
-                        
-                        ZStack {
-                            Rectangle()
-                                .fill(theme.dataTab)
-                                .cornerRadius(2)
-                                .frame(width: beyondTargetWidth, height: geometry.size.height)
-                                // Removed per-element animation in favor of parent withAnimation
-                        }
-                        .position(x: (beyondTargetWidth / 2) + targetPosition, y: geometry.size.height / 2)
-                        .contentShape(Rectangle())
-                        .helpMetadata(HelpMetadata(
-                            id: "progress-bar-beyond-target",
-                            title: "Points Beyond Target",
-                            description: "This blue section shows points earned beyond your daily target.",
-                            usageHints: [
-                                "Celebrates overachievement!",
-                                "Shows how far you've exceeded your goal",
-                                "Different color indicates bonus points"
-                            ],
-                            importance: .important
-                        ))
-                    }
-                    
-                    // Target marker/indicator
-                    ZStack {
-                        // Target decoration
-                        Rectangle()
-                            .fill(darkGreenColor)
-                            .frame(width: 3, height: geometry.size.height + 10)
-                        
-                        // Clickable target value badge
-                        Button(action: {
-                            // Initialize editable target with current value
-                            editableTarget = "\(dailyTarget)"
-                            isEditingTarget = true
-                        }) {
-                            ZStack {
-                                // Background pill
-                                Capsule()
-                                    .fill(darkGreenColor)
-                                    .frame(width: 48, height: 24)
-                                    .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
-                                
-                                // Target number
-                                Text("\(dailyTarget)")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .buttonStyle(PlainButtonStyle()) // Remove button styling
-                        .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
-                        .helpMetadata(HelpMetadata(
-                            id: "target-indicator",
-                            title: "Daily Target",
-                            description: "Your daily point goal shown as a green marker.",
-                            usageHints: [
-                                "Tap this green bubble to change your daily target",
-                                "Reaching your target completes your day",
-                                "The app will remember your target setting"
-                            ],
-                            importance: .important
-                        ))
-                    }
-                    .position(x: targetPosition, y: geometry.size.height / 2)
-                    
-                    // Current points indicator - show even at 0
-                    ZStack {
-                        // Points decoration line
-                        Rectangle()
-                            .fill(indicatorColor)
-                            .frame(width: 3, height: geometry.size.height + 10)
-                        
-                        // Current points bubble
-                        ZStack {
-                            // Background pill
-                            Capsule()
-                                .fill(indicatorColor)
-                                .frame(width: displayPoints > 999 ? 60 : 48, height: 24)
-                                .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
-                            
-                            // Always show the value from our displayedTextValue property
-                            Text("\(displayedTextValue)")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.white)
-                                .minimumScaleFactor(0.8)
-                                // Important: Do not use any transition or animation on the Text itself
-                                .id("staticPointsDisplay")
-                        }
-                        .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
-                        .helpMetadata(HelpMetadata(
-                            id: "points-indicator",
-                            title: "Current Points",
-                            description: "Shows your total earned points for the day.",
-                            usageHints: [
-                                "The bubble color matches the progress bar section",
-                                "Gold before reaching target, blue when exceeding target",
-                                "Updates in real-time as you complete tasks"
-                            ],
-                            importance: .important
-                        ))
-                    }
-                    .position(x: displayPoints > 0 ? indicatorPosition : 0, y: geometry.size.height / 2) // Place at far left (0) when points are 0
-                }
+                progressBarLayout(in: geometry)
             }
             .frame(height: 20) // Reduced height by 16.7%
             // Apply a consistent Z-index to ensure proper layering in help mode
@@ -256,109 +78,521 @@ struct ProgressBarView: View {
             }
         }
         // Present numeric keyboard when editing target
-        .sheet(isPresented: $isEditingTarget) {
-            // Numeric keyboard for editing target
-            VStack {
-                Text("Set Daily Target")
-                    .font(.headline)
-                    .padding()
-                
-                Text(editableTarget.isEmpty ? "0" : editableTarget)
-                    .font(.system(size: 36, weight: .bold))
-                    .padding()
-                
-                // Custom numeric keypad
-                VStack(spacing: 10) {
-                    // Number rows
-                    ForEach(0..<3) { row in
-                        HStack(spacing: 20) {
-                            ForEach(1...3, id: \.self) { col in
-                                let number = row * 3 + col
-                                Button(action: {
-                                    // Append digit
-                                    editableTarget += "\(number)"
-                                }) {
-                                    Text("\(number)")
-                                        .font(.system(size: 24, weight: .medium))
-                                        .frame(width: 60, height: 60)
-                                        .background(Color.gray.opacity(0.2))
-                                        .cornerRadius(30)
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Last row with 0, clear, done
-                    HStack(spacing: 20) {
-                        // Clear button
-                        Button(action: {
-                            editableTarget = ""
-                        }) {
-                            Image(systemName: "delete.left")
-                                .font(.system(size: 24))
-                                .frame(width: 60, height: 60)
-                                .background(Color.red.opacity(0.2))
-                                .cornerRadius(30)
-                        }
-                        
-                        // 0 button
-                        Button(action: {
-                            editableTarget += "0"
-                        }) {
-                            Text("0")
-                                .font(.system(size: 24, weight: .medium))
-                                .frame(width: 60, height: 60)
-                                .background(Color.gray.opacity(0.2))
-                                .cornerRadius(30)
-                        }
-                        
-                        // Done button
-                        Button(action: {
-                            // Save the target and trigger recalculation of progress bar
-                            if let newTarget = Int(editableTarget), newTarget > 0 {
-                                // Using withAnimation to smoothly update the UI
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    dailyTarget = newTarget
-                                    saveDailyTarget(newTarget)
-                                    
-                                    // Notify that target has changed
-                                    NotificationCenter.default.post(
-                                        name: Constants.Notifications.taskListChanged,
-                                        object: nil
-                                    )
-                                }
-                            }
-                            isEditingTarget = false
-                        }) {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 24))
-                                .frame(width: 60, height: 60)
-                                .background(Color.green.opacity(0.2))
-                                .cornerRadius(30)
-                        }
-                    }
-                }
-                .padding()
-                
-                Spacer()
+        .sheet(isPresented: $isEditingTarget) { targetEditingSheet }
+    }
+    
+    // Helper to calculate all values needed for progress bar rendering
+    private func calculateProgressValues(geometry: GeometryProxy) -> (
+        targetPosition: CGFloat,
+        displayPoints: Int,
+        indicatorPosition: CGFloat,
+        indicatorColor: Color,
+        actualProgressWidth: CGFloat,
+        normalizedProgress: Float
+    ) {
+        // Calculate positions and values
+        let targetRatio = CGFloat(dailyTarget) / 150.0
+        let targetPosition = min(geometry.size.width * 0.75, geometry.size.width * targetRatio)
+        
+        // Use the animated points value for smooth transitions
+        let displayPoints = Int(animatedPointsValue.rounded())
+        
+        // Calculate indicator position based on animated points
+        let targetRatioFloat = Float(dailyTarget) / 150.0
+        let pointsProgressRatio = min(Float(animatedPointsValue) / Float(dailyTarget), 1.0)
+        let normalizedProgress = pointsProgressRatio * targetRatioFloat
+        
+        // Calculate position as a direct mapping of points to width
+        let indicatorPosition = min(CGFloat(normalizedProgress) * geometry.size.width, geometry.size.width - 24)
+        let indicatorColor: Color = displayPoints >= dailyTarget ? theme.dataTab : theme.templateTab
+        
+        // Calculate progress width based on points
+        let actualProgressWidth = CGFloat(normalizedProgress) * geometry.size.width
+        
+        return (
+            targetPosition: targetPosition,
+            displayPoints: displayPoints,
+            indicatorPosition: indicatorPosition,
+            indicatorColor: indicatorColor,
+            actualProgressWidth: actualProgressWidth,
+            normalizedProgress: normalizedProgress
+        )
+    }
+    
+    // Main progress bar layout
+    private func progressBarLayout(in geometry: GeometryProxy) -> some View {
+        // Calculate all the values we need
+        let values = calculateProgressValues(geometry: geometry)
+        let targetPosition = values.targetPosition
+        let displayPoints = values.displayPoints
+        let indicatorPosition = values.indicatorPosition
+        let indicatorColor = values.indicatorColor
+        let actualProgressWidth = values.actualProgressWidth
+        let normalizedProgress = values.normalizedProgress
+        
+        // Split the complex view into smaller components
+        return ZStack(alignment: .leading) {
+            // Background component
+            progressBarBackground(geometry: geometry)
+            
+            // Gold progress section component
+            progressBarGoldSection(geometry: geometry, actualProgressWidth: actualProgressWidth, targetPosition: targetPosition)
+            
+            // Blue section (beyond target) if needed
+            if animatedPointsValue > Double(dailyTarget) {
+                progressBarBeyondTarget(geometry: geometry, targetPosition: targetPosition)
             }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
+            
+            // Target marker/indicator component
+            targetMarker(geometry: geometry, targetPosition: targetPosition)
+            
+            // Current points indicator component
+            pointsIndicator(geometry: geometry, indicatorPosition: indicatorPosition, displayPoints: displayPoints, indicatorColor: indicatorColor)
         }
     }
     
-    // No longer needed - we use actual points directly
-    // Kept for reference in case we need to revert
-    private func _calculateEstimatedPoints(progress: Float, targetRatioFloat: Float, dailyTarget: Int) -> Int {
-        if progress <= targetRatioFloat {
-            // Before target: calculate as portion of target (scales linearly to target)
-            return Int((progress / targetRatioFloat) * Float(dailyTarget))
-        } else {
-            // Beyond target: start with target and add overflow
-            let overProgress = progress - targetRatioFloat
-            let overPoints = Int(overProgress * 150.0)
-            return dailyTarget + overPoints
+    // Background component
+    private func progressBarBackground(geometry: GeometryProxy) -> some View {
+        ZStack {
+            Rectangle()
+                .fill(theme.progressBackground)
+                .cornerRadius(2)
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                
+            // Custom help highlight - only show in help mode when highlighted
+            if HelpSystem.shared.isHelpModeActive && HelpSystem.shared.isElementHighlighted("progress-bar-base") {
+                Rectangle()
+                    .stroke(Color.blue, lineWidth: 2)
+                    .cornerRadius(2)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+            }
         }
+        .contentShape(Rectangle()) // Ensure the entire area is tappable
+        // Replacement help button when in help mode
+        .overlay(
+            Group {
+                if HelpSystem.shared.isHelpModeActive {
+                    // Invisible button to trigger highlighting
+                    Button(action: {
+                        HelpSystem.shared.highlightElement("progress-bar-base")
+                    }) {
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+        )
+        // Register with help system for metadata only, not for highlighting
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                HelpSystem.shared.registerElement(
+                    id: "progress-bar-base",
+                    metadata: HelpMetadata(
+                        id: "progress-bar-base",
+                        title: "Progress Bar Background",
+                        description: "The gray background represents the full scale of possible points.",
+                        usageHints: [
+                            "The progress bar shows 0 to about 300 points",
+                            "Your daily target appears as a green vertical line"
+                        ],
+                        importance: .informational
+                    ),
+                    frame: CGRect(x: 0, y: 0, width: geometry.size.width, height: geometry.size.height)
+                )
+            }
+        }
+    }
+    
+    // Gold progress section component
+    private func progressBarGoldSection(geometry: GeometryProxy, actualProgressWidth: CGFloat, targetPosition: CGFloat) -> some View {
+        ZStack(alignment: .leading) {
+            // Main progress fill
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            theme.templateTab,
+                            theme.templateTab.opacity(0.85)
+                        ]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(2)
+                .frame(width: min(max(0, actualProgressWidth), targetPosition), height: geometry.size.height)
+                .alignmentGuide(.leading) { _ in 0 } // Force alignment to left edge
+                
+            // Custom help highlight - only show in help mode when highlighted
+            if HelpSystem.shared.isHelpModeActive && HelpSystem.shared.isElementHighlighted("progress-bar-to-target") {
+                Rectangle()
+                    .stroke(Color.blue, lineWidth: 2)
+                    .cornerRadius(2)
+                    .frame(width: min(max(0, actualProgressWidth), targetPosition), height: geometry.size.height)
+            }
+        }
+        .contentShape(Rectangle())
+        // Replacement help button when in help mode
+        .overlay(
+            Group {
+                if HelpSystem.shared.isHelpModeActive {
+                    // Invisible button to trigger highlighting
+                    Button(action: {
+                        HelpSystem.shared.highlightElement("progress-bar-to-target")
+                    }) {
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(width: min(max(4, actualProgressWidth), targetPosition), height: geometry.size.height)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(actualProgressWidth < 4) // Disable when progress bar is too small
+                }
+            }
+        )
+        // Register with help system for metadata only, not for highlighting
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                HelpSystem.shared.registerElement(
+                    id: "progress-bar-to-target",
+                    metadata: HelpMetadata(
+                        id: "progress-bar-to-target",
+                        title: "Progress to Target",
+                        description: "This gold section shows your progress toward your daily target.",
+                        usageHints: [
+                            "Fills from left to right as you earn points",
+                            "Turns completely gold when you reach your target"
+                        ],
+                        importance: .important
+                    ),
+                    frame: CGRect(x: 0, y: 0, width: min(max(0, actualProgressWidth), targetPosition), height: geometry.size.height)
+                )
+            }
+        }
+    }
+    
+    // Beyond target (blue) section component
+    private func progressBarBeyondTarget(geometry: GeometryProxy, targetPosition: CGFloat) -> some View {
+        let beyondTargetRatio = min(Float(animatedPointsValue - Double(dailyTarget)) / 150.0, 1.0)
+        let beyondTargetWidth = CGFloat(beyondTargetRatio) * geometry.size.width
+        
+        return ZStack {
+            // Main blue progress rectangle
+            Rectangle()
+                .fill(theme.dataTab)
+                .cornerRadius(2)
+                .frame(width: beyondTargetWidth, height: geometry.size.height)
+            
+            // Custom help highlight - only show in help mode when highlighted
+            if HelpSystem.shared.isHelpModeActive && HelpSystem.shared.isElementHighlighted("progress-bar-beyond-target") {
+                Rectangle()
+                    .stroke(Color.blue, lineWidth: 2)
+                    .cornerRadius(2)
+                    .frame(width: beyondTargetWidth, height: geometry.size.height)
+            }
+        }
+        .position(x: (beyondTargetWidth / 2) + targetPosition, y: geometry.size.height / 2)
+        .contentShape(Rectangle())
+        // Replacement help button when in help mode
+        .overlay(
+            Group {
+                if HelpSystem.shared.isHelpModeActive {
+                    // Invisible button to trigger highlighting
+                    Button(action: {
+                        HelpSystem.shared.highlightElement("progress-bar-beyond-target")
+                    }) {
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(width: beyondTargetWidth, height: geometry.size.height)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .position(x: beyondTargetWidth/2, y: geometry.size.height/2)
+                }
+            }
+        )
+        // Register with help system for metadata only, not for highlighting
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                HelpSystem.shared.registerElement(
+                    id: "progress-bar-beyond-target",
+                    metadata: HelpMetadata(
+                        id: "progress-bar-beyond-target",
+                        title: "Points Beyond Target",
+                        description: "This blue section shows points earned beyond your daily target.",
+                        usageHints: [
+                            "Celebrates overachievement!",
+                            "Shows how far you've exceeded your goal",
+                            "Different color indicates bonus points"
+                        ],
+                        importance: .important
+                    ),
+                    frame: CGRect(x: targetPosition, y: 0, width: beyondTargetWidth, height: geometry.size.height)
+                )
+            }
+        }
+    }
+    
+    // Target marker/indicator component
+    private func targetMarker(geometry: GeometryProxy, targetPosition: CGFloat) -> some View {
+        ZStack {
+            // Target decoration
+            Rectangle()
+                .fill(darkGreenColor)
+                .frame(width: 3, height: geometry.size.height + 10)
+            
+            ZStack {
+                // Main content - unaffected by help mode
+                Button(action: {
+                    // Only trigger action if not in help mode
+                    if !HelpSystem.shared.isHelpModeActive {
+                        // Initialize editable target with current value
+                        editableTarget = "\(dailyTarget)"
+                        isEditingTarget = true
+                    }
+                }) {
+                    ZStack {
+                        // Background pill
+                        Capsule()
+                            .fill(darkGreenColor)
+                            .frame(width: 48, height: 24)
+                            .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
+                        
+                        // Target number
+                        Text("\(dailyTarget)")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                // Help mode overlay
+                if HelpSystem.shared.isHelpModeActive {
+                    // Invisible help button
+                    Button(action: {
+                        HelpSystem.shared.highlightElement("target-indicator")
+                    }) {
+                        Capsule()
+                            .fill(Color.clear)
+                            .frame(width: 52, height: 28) // Slightly larger for easier tap
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    // Show highlight when selected
+                    if HelpSystem.shared.isElementHighlighted("target-indicator") {
+                        Capsule()
+                            .stroke(Color.blue, lineWidth: 2)
+                            .frame(width: 50, height: 26) // 2px larger than the 48×24 pill
+                    }
+                }
+            }
+            .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
+            // Register with help system
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    // Register approximate frame based on targetPosition
+                    let targetFrame = CGRect(
+                        x: targetPosition - 24, // Half of pill width
+                        y: -20, // Offset
+                        width: 48, // Pill width
+                        height: 24 // Pill height
+                    )
+                    
+                    HelpSystem.shared.registerElement(
+                        id: "target-indicator",
+                        metadata: HelpMetadata(
+                            id: "target-indicator",
+                            title: "Daily Target",
+                            description: "Your daily point goal shown as a green marker.",
+                            usageHints: [
+                                "Tap this green bubble to change your daily target",
+                                "Reaching your target completes your day",
+                                "The app will remember your target setting"
+                            ],
+                            importance: .important
+                        ),
+                        frame: targetFrame
+                    )
+                }
+            }
+        }
+        .position(x: targetPosition, y: geometry.size.height / 2)
+    }
+    
+    // Current points indicator component
+    private func pointsIndicator(geometry: GeometryProxy, indicatorPosition: CGFloat, displayPoints: Int, indicatorColor: Color) -> some View {
+        ZStack {
+            // Points decoration line
+            Rectangle()
+                .fill(indicatorColor)
+                .frame(width: 3, height: geometry.size.height + 10)
+            
+            ZStack {
+                // Current points bubble - main content
+                ZStack {
+                    // Background pill
+                    Capsule()
+                        .fill(indicatorColor)
+                        .frame(width: displayPoints > 999 ? 60 : 48, height: 24)
+                        .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
+                    
+                    // Always show the value from our displayedTextValue property
+                    Text("\(displayedTextValue)")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.white)
+                        .minimumScaleFactor(0.8)
+                        // Important: Do not use any transition or animation on the Text itself
+                        .id("staticPointsDisplay")
+                }
+                
+                // Help mode overlay
+                if HelpSystem.shared.isHelpModeActive {
+                    // Invisible help button
+                    Button(action: {
+                        HelpSystem.shared.highlightElement("points-indicator")
+                    }) {
+                        let width: CGFloat = displayPoints > 999 ? 64 : 52 // Slightly larger for easier tap
+                        Capsule()
+                            .fill(Color.clear)
+                            .frame(width: width, height: 28)
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    // Show highlight when selected
+                    if HelpSystem.shared.isElementHighlighted("points-indicator") {
+                        let width: CGFloat = displayPoints > 999 ? 62 : 50 // 2px larger than the original
+                        Capsule()
+                            .stroke(Color.blue, lineWidth: 2)
+                            .frame(width: width, height: 26)
+                    }
+                }
+            }
+            .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
+            // Register with help system
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    let width: CGFloat = displayPoints > 999 ? 60 : 48
+                    let pointsFrame = CGRect(
+                        x: displayPoints > 0 ? indicatorPosition - width/2 : -width/2, // Center based on indicator position
+                        y: -20, // Offset
+                        width: width, // Pill width
+                        height: 24 // Pill height
+                    )
+                    
+                    HelpSystem.shared.registerElement(
+                        id: "points-indicator",
+                        metadata: HelpMetadata(
+                            id: "points-indicator",
+                            title: "Current Points",
+                            description: "Shows your total earned points for the day.",
+                            usageHints: [
+                                "The bubble color matches the progress bar section",
+                                "Gold before reaching target, blue when exceeding target",
+                                "Updates in real-time as you complete tasks"
+                            ],
+                            importance: .important
+                        ),
+                        frame: pointsFrame
+                    )
+                }
+            }
+        }
+        .position(x: displayPoints > 0 ? indicatorPosition : 0, y: geometry.size.height / 2) // Place at far left (0) when points are 0
+    }
+    
+    // Target edit sheet content
+    private var targetEditingSheet: some View {
+        // Numeric keyboard for editing target
+        VStack {
+            Text("Set Daily Target")
+                .font(.headline)
+                .padding()
+            
+            Text(editableTarget.isEmpty ? "0" : editableTarget)
+                .font(.system(size: 36, weight: .bold))
+                .padding()
+            
+            // Custom numeric keypad
+            VStack(spacing: 10) {
+                // Number rows
+                ForEach(0..<3) { row in
+                    HStack(spacing: 20) {
+                        ForEach(1...3, id: \.self) { col in
+                            let number = row * 3 + col
+                            Button(action: {
+                                // Append digit
+                                editableTarget += "\(number)"
+                            }) {
+                                Text("\(number)")
+                                    .font(.system(size: 24, weight: .medium))
+                                    .frame(width: 60, height: 60)
+                                    .background(Color.gray.opacity(0.2))
+                                    .cornerRadius(30)
+                            }
+                        }
+                    }
+                }
+                
+                // Last row with 0, clear, done
+                HStack(spacing: 20) {
+                    // Clear button
+                    Button(action: {
+                        editableTarget = ""
+                    }) {
+                        Image(systemName: "delete.left")
+                            .font(.system(size: 24))
+                            .frame(width: 60, height: 60)
+                            .background(Color.red.opacity(0.2))
+                            .cornerRadius(30)
+                    }
+                    
+                    // 0 button
+                    Button(action: {
+                        editableTarget += "0"
+                    }) {
+                        Text("0")
+                            .font(.system(size: 24, weight: .medium))
+                            .frame(width: 60, height: 60)
+                            .background(Color.gray.opacity(0.2))
+                            .cornerRadius(30)
+                    }
+                    
+                    // Done button
+                    Button(action: {
+                        // Save the target and trigger recalculation of progress bar
+                        if let newTarget = Int(editableTarget), newTarget > 0 {
+                            // Using withAnimation to smoothly update the UI
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                dailyTarget = newTarget
+                                saveDailyTarget(newTarget)
+                                
+                                // Notify that target has changed
+                                NotificationCenter.default.post(
+                                    name: Constants.Notifications.taskListChanged,
+                                    object: nil
+                                )
+                            }
+                        }
+                        isEditingTarget = false
+                    }) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 24))
+                            .frame(width: 60, height: 60)
+                            .background(Color.green.opacity(0.2))
+                            .cornerRadius(30)
+                    }
+                }
+            }
+            .padding()
+            
+            Spacer()
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
     }
     
     // Load the daily target from CoreData
@@ -398,5 +632,3 @@ struct ProgressBarView_Previews: PreviewProvider {
             .padding()
     }
 }
-
-// No longer need custom AnimatingNumber - using visibility toggle approach instead

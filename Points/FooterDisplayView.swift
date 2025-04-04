@@ -90,41 +90,86 @@ struct FooterDisplayView: View {
                 // Purple + button - ALWAYS creates a Routine
                 tabButton(icon: "plus", color: theme.routinesTab, action: onRoutineButtonTapped)
                 // Blue book button - Help mode toggle
-                ZStack {
-                    tabButton(icon: "book.fill", color: theme.tasksTab, action: onTaskButtonTapped)
-                }
-                .helpMetadata(HelpMetadata(
-                    id: "help-button",
-                    title: "Help Mode Button",
-                    description: "Toggles the interactive help system on and off.",
-                    usageHints: [
-                        "Tap to enter help mode where you can explore the UI",
-                        "When in help mode, tap UI elements to learn what they do",
-                        "Tap this button again to exit help mode"
-                    ],
-                    importance: .important
-                ))
+                tabButton(icon: "book.fill", color: theme.tasksTab, action: onTaskButtonTapped)
                 
                 // Home button in the center, positioned higher
                 HStack {
                     Spacer()
                     VStack {
                         // Added a VStack to control vertical position
-                        Button(action: onHomeButtonTapped) {
-                            ZStack {
-                                // Background circle with summary tab color
-                                Circle()
-                                    .fill(theme.summaryTab)
-                                    .frame(width: 50, height: 50)
-                                    .shadow(color: theme.summaryTab.opacity(0.6), radius: 10, x: 0, y: 0)
+                        ZStack {
+                            // Main button that maintains its appearance
+                            Button(action: {
+                                // Only trigger normal action if not in help mode
+                                if !HelpSystem.shared.isHelpModeActive {
+                                    onHomeButtonTapped()
+                                }
+                            }) {
+                                ZStack {
+                                    // Background circle with summary tab color
+                                    Circle()
+                                        .fill(theme.summaryTab)
+                                        .frame(width: 50, height: 50)
+                                        .shadow(color: theme.summaryTab.opacity(0.6), radius: 10, x: 0, y: 0)
+                                    
+                                    // Home icon in white
+                                    Image(systemName: "house.fill")
+                                        .font(.system(size: 22, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            
+                            // Help mode overlay
+                            if HelpSystem.shared.isHelpModeActive {
+                                // Create transparent button for help mode
+                                Button(action: {
+                                    HelpSystem.shared.highlightElement("home-button")
+                                }) {
+                                    Circle()
+                                        .fill(Color.clear)
+                                        .frame(width: 54, height: 54) // Slightly larger tap area
+                                        .contentShape(Circle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
                                 
-                                // Home icon in white
-                                Image(systemName: "house.fill")
-                                    .font(.system(size: 22, weight: .bold))
-                                    .foregroundColor(.white)
+                                // Show highlight when this element is highlighted
+                                if HelpSystem.shared.isElementHighlighted("home-button") {
+                                    Circle()
+                                        .stroke(Color.blue, lineWidth: 2)
+                                        .frame(width: 54, height: 54) // Precisely match outer edge of button
+                                }
                             }
                         }
-                        .buttonStyle(PlainButtonStyle())
+                        // Overlay for proper frame capture
+                        .overlay(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        // Register with the help system when it appears
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                            // Calculate global frame
+                                            let frame = geo.frame(in: .global)
+                                            HelpSystem.shared.registerElement(
+                                                id: "home-button",
+                                                metadata: HelpMetadata(
+                                                    id: "home-button",
+                                                    title: "Home Button",
+                                                    description: "Returns to today's view.",
+                                                    usageHints: [
+                                                        "Tap to instantly return to today's date",
+                                                        "Resets date navigation to the current day",
+                                                        "Use after exploring past or future dates",
+                                                        "Always shows your most current tasks"
+                                                    ],
+                                                    importance: .important
+                                                ),
+                                                frame: frame
+                                            )
+                                        }
+                                    }
+                            }
+                        )
                         
                         // Add more space to position the button higher
                         Spacer().frame(height: 14)
@@ -198,22 +243,178 @@ struct FooterDisplayView: View {
         }
     }
     
-    // Helper method to create consistent tab buttons
+    // Helper method to create consistent tab buttons with help mode integration
     private func tabButton(icon: String, isText: Bool = false, color: Color, action: @escaping () -> Void) -> some View {
         HStack {
             Spacer()
-            Button(action: action) {
-                if isText {
-                    Text(icon)
-                        .themeCircleButton(color: color, textColor: theme.textInverted)
-                } else {
-                    Image(systemName: icon)
-                        .themeCircleButton(color: color, textColor: theme.textInverted)
+            
+            // Use ZStack to allow for custom help mode behavior
+            ZStack {
+                // Main button that maintains its appearance
+                Button(action: {
+                    // Only trigger normal action if not in help mode
+                    if !HelpSystem.shared.isHelpModeActive {
+                        action()
+                    }
+                }) {
+                    if isText {
+                        Text(icon)
+                            .themeCircleButton(color: color, textColor: theme.textInverted)
+                    } else {
+                        Image(systemName: icon)
+                            .themeCircleButton(color: color, textColor: theme.textInverted)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+                
+                // Special case for the help button - it always functions
+                if icon == "book.fill" && HelpSystem.shared.isHelpModeActive {
+                    // This is the help button in help mode - still allow it to function
+                    Button(action: {
+                        // Allow help button to toggle help mode
+                        action()
+                    }) {
+                        Circle()
+                            .fill(Color.clear)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                
+                // Help mode overlay for highlighting
+                if HelpSystem.shared.isHelpModeActive && icon != "book.fill" {
+                    // Create transparent button for help mode
+                    Button(action: {
+                        // Get appropriate ID based on the icon
+                        let helpID = getHelpIDForIcon(icon)
+                        HelpSystem.shared.highlightElement(helpID)
+                    }) {
+                        Circle()
+                            .fill(Color.clear)
+                            .frame(width: 36, height: 36)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    // Show highlight when this element is highlighted
+                    let helpID = getHelpIDForIcon(icon)
+                    if HelpSystem.shared.isElementHighlighted(helpID) {
+                        Circle()
+                            .stroke(Color.blue, lineWidth: 2)
+                            .frame(width: 36, height: 36) // Precisely match the button size
+                    }
                 }
             }
+            // Overlay to register with help system
+            .overlay(
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear {
+                            // Register with help system when it appears
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                // Get the appropriate ID and metadata
+                                let helpID = getHelpIDForIcon(icon)
+                                let frame = geo.frame(in: .global)
+                                
+                                // Create appropriate metadata based on icon
+                                let metadata = getHelpMetadataForIcon(icon)
+                                
+                                // Register with help system
+                                HelpSystem.shared.registerElement(
+                                    id: helpID,
+                                    metadata: metadata,
+                                    frame: frame
+                                )
+                            }
+                        }
+                }
+            )
+            
             Spacer()
         }
         .frame(width: UIScreen.main.bounds.width/5)
+    }
+    
+    // Helper to get the correct help ID for a button based on its icon
+    private func getHelpIDForIcon(_ icon: String) -> String {
+        switch icon {
+        case "plus":
+            return "create-routine-button"
+        case "book.fill":
+            return "help-button"
+        case "xmark.bin":
+            return "delete-button"
+        case "sun.max.fill", "moon.fill":
+            return "theme-toggle-button"
+        default:
+            return "button-\(icon)"
+        }
+    }
+    
+    // Helper to get the appropriate help metadata for a button based on its icon
+    private func getHelpMetadataForIcon(_ icon: String) -> HelpMetadata {
+        switch icon {
+        case "plus":
+            return HelpMetadata(
+                id: "create-routine-button",
+                title: "Create Routine Button",
+                description: "Creates a new recurring routine.",
+                usageHints: [
+                    "Tap to create a recurring task or habit",
+                    "Routines are designed to be done regularly",
+                    "Points are typically earned multiple times",
+                    "Routines automatically reset each day"
+                ],
+                importance: .important
+            )
+        case "book.fill":
+            return HelpMetadata(
+                id: "help-button",
+                title: "Help Mode Button",
+                description: "Toggles the interactive help system on and off.",
+                usageHints: [
+                    "Tap to enter help mode where you can explore the UI",
+                    "When in help mode, tap UI elements to learn what they do",
+                    "Tap this button again to exit help mode"
+                ],
+                importance: .important
+            )
+        case "xmark.bin":
+            return HelpMetadata(
+                id: "delete-button",
+                title: "Delete Tasks Button",
+                description: "Deletes all tasks for the current day.",
+                usageHints: [
+                    "Tap to show confirmation dialog",
+                    "Removes all tasks and routines for today",
+                    "Use with caution - this action cannot be undone",
+                    "Resets your daily progress to zero"
+                ],
+                importance: .critical
+            )
+        case "sun.max.fill", "moon.fill":
+            return HelpMetadata(
+                id: "theme-toggle-button",
+                title: "Theme Toggle Button",
+                description: "Switches between light and dark mode.",
+                usageHints: [
+                    "Tap to change app appearance",
+                    "Light mode uses brighter colors",
+                    "Dark mode is easier on the eyes at night",
+                    "Your preference is saved between app sessions"
+                ],
+                importance: .informational
+            )
+        default:
+            return HelpMetadata(
+                id: "button-\(icon)",
+                title: "Button",
+                description: "Performs an action.",
+                usageHints: ["Tap to activate"],
+                importance: .informational
+            )
+        }
     }
     
     // MARK: - Methods

@@ -94,6 +94,7 @@ struct MainView: View {
                         .padding(.bottom, 2) // Reduced spacing by 50%
                         .padding(.top, 2) // Reduced spacing by 50%
                         .transition(.move(edge: .top).combined(with: .opacity))
+                        .zIndex(90) // High z-index but below button help overlay (100) and quick create button (50)
                 }
                 
                 // Main content (compressed when help mode is active)
@@ -132,7 +133,7 @@ struct MainView: View {
                 }
             }
             
-            // Create a VStack for the floating + button
+            // Create a VStack for the floating + button - always keep visible even in help mode
             VStack {
                 Spacer()
                 
@@ -140,39 +141,86 @@ struct MainView: View {
                 HStack {
                     Spacer() // Push to right
                     
-                    // Create Task Button
-                    Button(action: {
-                        // Set it to create a regular task
-                        self.createAsRoutine = false
-                        self.showCreateTaskSheet = true
-                    }) {
-                        ZStack {
-                            // Background circle with task tab color
-                            Circle()
-                                .fill(theme.tasksTab)
-                                .frame(width: 58, height: 58)
-                                .shadow(color: theme.tasksTab.opacity(0.6), radius: 4, x: 0, y: 2)
+                    // Create Task Button - customized for help mode integration
+                    ZStack {
+                        // Main button that remains unaffected by help mode
+                        Button(action: {
+                            // Only trigger when not in help mode
+                            if !helpSystem.isHelpModeActive {
+                                // Set it to create a regular task
+                                self.createAsRoutine = false
+                                self.showCreateTaskSheet = true
+                            }
+                        }) {
+                            ZStack {
+                                // Background circle with task tab color
+                                Circle()
+                                    .fill(theme.tasksTab)
+                                    .frame(width: 58, height: 58)
+                                    .shadow(color: theme.tasksTab.opacity(0.6), radius: 4, x: 0, y: 2)
+                                
+                                // Plus icon in white
+                                Image(systemName: "plus")
+                                    .font(.system(size: 30, weight: .medium))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Help mode overlay - only shown when in help mode
+                        if helpSystem.isHelpModeActive {
+                            // Invisible button for help mode that preserves button appearance
+                            Button(action: {
+                                // This action only triggers in help mode
+                                helpSystem.highlightElement("quick-create-task-button")
+                            }) {
+                                Circle()
+                                    .fill(Color.clear)
+                                    .frame(width: 62, height: 62) // Slightly larger tap area
+                                    .contentShape(Circle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
                             
-                            // Plus icon in white
-                            Image(systemName: "plus")
-                                .font(.system(size: 30, weight: .medium))
-                                .foregroundColor(.white)
+                            // Only show highlight when this element is explicitly highlighted
+                            if helpSystem.isElementHighlighted("quick-create-task-button") {
+                                Circle()
+                                    .stroke(Color.blue, lineWidth: 2)
+                                    .frame(width: 62, height: 62) // Precisely 4px larger than the 58px button
+                            }
                         }
                     }
                     .padding(.trailing, 16)
                     .padding(.bottom, 90) // Position above the footer
-                    .buttonStyle(PlainButtonStyle())
-                    .helpMetadata(HelpMetadata(
-                        id: "quick-create-task-button",
-                        title: "Create Task",
-                        description: "Quickly create a new task",
-                        usageHints: [
-                            "Tap to create a regular task",
-                            "Uses the same form as +Task button",
-                            "Tasks appear in the task list for the current day"
-                        ],
-                        importance: .important
-                    ))
+                    .overlay(
+                        GeometryReader { geo in
+                            // This transparent overlay captures the exact button frame
+                            Color.clear
+                                .onAppear {
+                                    // Register this element with the help system when it appears
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                        // Calculate global frame by converting local frame to global coordinates
+                                        let frame = geo.frame(in: .global)
+                                        // Register with the help system
+                                        HelpSystem.shared.registerElement(
+                                            id: "quick-create-task-button",
+                                            metadata: HelpMetadata(
+                                                id: "quick-create-task-button",
+                                                title: "Quick Create Task Button",
+                                                description: "A convenient way to quickly create a new task.",
+                                                usageHints: [
+                                                    "Tap to create a regular task immediately",
+                                                    "Creates a task for the current day",
+                                                    "Same functionality as the +Task button but more accessible",
+                                                    "Fill in task details in the form that appears"
+                                                ],
+                                                importance: .important
+                                            ),
+                                            frame: frame
+                                        )
+                                    }
+                                }
+                        }
+                    )
                 }
             }
             

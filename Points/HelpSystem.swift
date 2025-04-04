@@ -229,16 +229,36 @@ struct HelpOverlayModifier: ViewModifier {
                     
                     // Visual highlight when this element is selected
                     if helpSystem.isElementHighlighted(metadata.id) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .stroke(Color.blue, lineWidth: 3)
-                            .zIndex(99) // Below the tap area but above content
-                            
-                        // Extra highlight for pill-shaped elements like points and target bubbles
-                        if metadata.id == "points-indicator" || metadata.id == "target-indicator" {
-                            Capsule()
-                                .stroke(Color.blue, lineWidth: 3)
-                                .zIndex(99)
+                        Group {
+                            // Pill highlight for indicators
+                            if metadata.id == "points-indicator" || metadata.id == "target-indicator" {
+                                Capsule()
+                                    .stroke(Color.blue, lineWidth: 3)
+                                    .zIndex(99)
+                            }
+                            // Skip highlight for UI elements that handle their own highlighting
+                            else if metadata.id == "quick-create-task-button" || 
+                                   metadata.id == "create-routine-button" || 
+                                   metadata.id == "help-button" || 
+                                   metadata.id == "home-button" || 
+                                   metadata.id == "delete-button" || 
+                                   metadata.id == "theme-toggle-button" ||
+                                   metadata.id == "progress-bar-base" ||
+                                   metadata.id == "progress-bar-to-target" ||
+                                   metadata.id == "progress-bar-beyond-target" ||
+                                   metadata.id == "target-indicator" ||
+                                   metadata.id == "points-indicator" {
+                                // No highlight here - handled directly in the component
+                                Color.clear.frame(width: 0, height: 0)
+                            }
+                            // Default highlight for rectangular elements
+                            else {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.blue, lineWidth: 3)
+                                    .zIndex(99) // Below the tap area but above content
+                            }
                         }
+                        .animation(.easeInOut(duration: 0.2), value: helpSystem.highlightedElementID)
                     }
                 }
             }
