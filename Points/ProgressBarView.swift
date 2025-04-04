@@ -24,6 +24,9 @@ struct ProgressBarView: View {
     // Custom green color for target marker
     private let darkGreenColor = Color(red: 0.2, green: 0.6, blue: 0.4) // Vibrant green that fits better with the palette
     
+    // Help system reference
+    @ObservedObject private var helpSystem = HelpSystem.shared
+    
     init(progress: Binding<Float> = .constant(0), actualPoints: Int = 0) {
         self._progress = progress
         self.actualPoints = actualPoints
@@ -153,55 +156,125 @@ struct ProgressBarView: View {
     
     // Background component
     private func progressBarBackground(geometry: GeometryProxy) -> some View {
-        ZStack {
-            Rectangle()
-                .fill(theme.progressBackground)
-                .cornerRadius(2)
-                .frame(width: geometry.size.width, height: geometry.size.height)
-                
-            // Custom help highlight - only show in help mode when highlighted
-            if HelpSystem.shared.isHelpModeActive && HelpSystem.shared.isElementHighlighted("progress-bar-base") {
+        // Get the values we need for calculating the remaining space
+        let values = calculateProgressValues(geometry: geometry)
+        let targetPosition = values.targetPosition
+        let actualProgressWidth = values.actualProgressWidth
+        
+        return ZStack {
+            ZStack {
+                // Full-width background
                 Rectangle()
-                    .stroke(Color.blue, lineWidth: 2)
+                    .fill(theme.progressBackground)
                     .cornerRadius(2)
                     .frame(width: geometry.size.width, height: geometry.size.height)
-            }
-        }
-        .contentShape(Rectangle()) // Ensure the entire area is tappable
-        // Replacement help button when in help mode
-        .overlay(
-            Group {
-                if HelpSystem.shared.isHelpModeActive {
-                    // Invisible button to trigger highlighting
-                    Button(action: {
-                        HelpSystem.shared.highlightElement("progress-bar-base")
-                    }) {
-                        Rectangle()
-                            .fill(Color.clear)
-                            .frame(width: geometry.size.width, height: geometry.size.height)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                    
+                // Custom help highlight - only show in help mode when highlighted
+                if helpSystem.isHelpModeActive && helpSystem.isElementHighlighted("progress-bar-base") {
+                    Rectangle()
+                        .stroke(Color.blue, lineWidth: 2)
+                        .cornerRadius(2)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
                 }
             }
-        )
-        // Register with help system for metadata only, not for highlighting
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                HelpSystem.shared.registerElement(
-                    id: "progress-bar-base",
-                    metadata: HelpMetadata(
+            .contentShape(Rectangle()) // Ensure the entire area is tappable
+            // Replacement help button when in help mode
+            .overlay(
+                Group {
+                    if helpSystem.isHelpModeActive {
+                        // Invisible button to trigger highlighting
+                        Button(action: {
+                            helpSystem.highlightElement("progress-bar-base")
+                        }) {
+                            Rectangle()
+                                .fill(Color.clear)
+                                .frame(width: geometry.size.width, height: geometry.size.height)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+            )
+            // Register with help system for metadata only, not for highlighting
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    HelpSystem.shared.registerElement(
                         id: "progress-bar-base",
-                        title: "Progress Bar Background",
-                        description: "The gray background represents the full scale of possible points.",
-                        usageHints: [
-                            "The progress bar shows 0 to about 300 points",
-                            "Your daily target appears as a green vertical line"
-                        ],
-                        importance: .informational
-                    ),
-                    frame: CGRect(x: 0, y: 0, width: geometry.size.width, height: geometry.size.height)
+                        metadata: HelpMetadata(
+                            id: "progress-bar-base",
+                            title: "Progress Bar Background",
+                            description: "The gray background represents the full scale of possible points.",
+                            usageHints: [
+                                "The progress bar shows 0 to about 300 points",
+                                "Your daily target appears as a green vertical line",
+                                "Gold section fills as you earn points"
+                            ],
+                            importance: .informational
+                        ),
+                        frame: CGRect(x: 0, y: 0, width: geometry.size.width, height: geometry.size.height)
+                    )
+                }
+            }
+            
+            // Remaining progress space to target - this is the gray area between the gold and the target
+            if actualProgressWidth < targetPosition {
+                let remainingWidth = max(0, targetPosition - actualProgressWidth)
+                let remainingX = actualProgressWidth + (remainingWidth / 2)
+                
+                ZStack {
+                    // No visible element, just used for hit testing
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frame(width: remainingWidth, height: geometry.size.height)
+                        
+                    // Custom help highlight - only show in help mode when highlighted
+                    if helpSystem.isHelpModeActive && helpSystem.isElementHighlighted("progress-remaining") {
+                        Rectangle()
+                            .stroke(Color.blue, lineWidth: 2)
+                            .cornerRadius(2)
+                            .frame(width: remainingWidth, height: geometry.size.height)
+                    }
+                }
+                .position(x: remainingX, y: geometry.size.height / 2)
+                .contentShape(Rectangle())
+                // Replacement help button when in help mode
+                .overlay(
+                    Group {
+                        if helpSystem.isHelpModeActive {
+                            // Invisible button to trigger highlighting
+                            Button(action: {
+                                helpSystem.highlightElement("progress-remaining")
+                            }) {
+                                Rectangle()
+                                    .fill(Color.clear)
+                                    .frame(width: remainingWidth, height: geometry.size.height)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .position(x: remainingWidth/2, y: geometry.size.height/2)
+                        }
+                    }
                 )
+                // Register with help system for metadata only, not for highlighting
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        HelpSystem.shared.registerElement(
+                            id: "progress-remaining",
+                            metadata: HelpMetadata(
+                                id: "progress-remaining",
+                                title: "Remaining Progress",
+                                description: "This area shows how much more you need to reach your target.",
+                                usageHints: [
+                                    "Gray area represents points still needed",
+                                    "Will be filled with gold as you earn more points",
+                                    "Complete tasks to fill this area and reach your target"
+                                ],
+                                importance: .important
+                            ),
+                            frame: CGRect(x: actualProgressWidth, y: 0, width: remainingWidth, height: geometry.size.height)
+                        )
+                    }
+                }
             }
         }
     }
@@ -226,7 +299,7 @@ struct ProgressBarView: View {
                 .alignmentGuide(.leading) { _ in 0 } // Force alignment to left edge
                 
             // Custom help highlight - only show in help mode when highlighted
-            if HelpSystem.shared.isHelpModeActive && HelpSystem.shared.isElementHighlighted("progress-bar-to-target") {
+            if helpSystem.isHelpModeActive && helpSystem.isElementHighlighted("progress-gold-section") {
                 Rectangle()
                     .stroke(Color.blue, lineWidth: 2)
                     .cornerRadius(2)
@@ -237,10 +310,10 @@ struct ProgressBarView: View {
         // Replacement help button when in help mode
         .overlay(
             Group {
-                if HelpSystem.shared.isHelpModeActive {
+                if helpSystem.isHelpModeActive {
                     // Invisible button to trigger highlighting
                     Button(action: {
-                        HelpSystem.shared.highlightElement("progress-bar-to-target")
+                        helpSystem.highlightElement("progress-gold-section")
                     }) {
                         Rectangle()
                             .fill(Color.clear)
@@ -256,13 +329,15 @@ struct ProgressBarView: View {
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 HelpSystem.shared.registerElement(
-                    id: "progress-bar-to-target",
+                    id: "progress-gold-section",
                     metadata: HelpMetadata(
-                        id: "progress-bar-to-target",
-                        title: "Progress to Target",
-                        description: "This gold section shows your progress toward your daily target.",
+                        id: "progress-gold-section",
+                        title: "Gold Progress Bar",
+                        description: "This gold section shows your current progress toward your daily target.",
                         usageHints: [
                             "Fills from left to right as you earn points",
+                            "Shows your progress percentage toward target",
+                            "Gold color represents points earned so far",
                             "Turns completely gold when you reach your target"
                         ],
                         importance: .important
@@ -286,7 +361,7 @@ struct ProgressBarView: View {
                 .frame(width: beyondTargetWidth, height: geometry.size.height)
             
             // Custom help highlight - only show in help mode when highlighted
-            if HelpSystem.shared.isHelpModeActive && HelpSystem.shared.isElementHighlighted("progress-bar-beyond-target") {
+            if helpSystem.isHelpModeActive && helpSystem.isElementHighlighted("progress-beyond-section") {
                 Rectangle()
                     .stroke(Color.blue, lineWidth: 2)
                     .cornerRadius(2)
@@ -298,10 +373,10 @@ struct ProgressBarView: View {
         // Replacement help button when in help mode
         .overlay(
             Group {
-                if HelpSystem.shared.isHelpModeActive {
+                if helpSystem.isHelpModeActive {
                     // Invisible button to trigger highlighting
                     Button(action: {
-                        HelpSystem.shared.highlightElement("progress-bar-beyond-target")
+                        helpSystem.highlightElement("progress-beyond-section")
                     }) {
                         Rectangle()
                             .fill(Color.clear)
@@ -317,15 +392,16 @@ struct ProgressBarView: View {
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 HelpSystem.shared.registerElement(
-                    id: "progress-bar-beyond-target",
+                    id: "progress-beyond-section",
                     metadata: HelpMetadata(
-                        id: "progress-bar-beyond-target",
+                        id: "progress-beyond-section",
                         title: "Points Beyond Target",
                         description: "This blue section shows points earned beyond your daily target.",
                         usageHints: [
                             "Celebrates overachievement!",
                             "Shows how far you've exceeded your goal",
-                            "Different color indicates bonus points"
+                            "Different color indicates bonus achievement",
+                            "Blue section appears only after reaching your target"
                         ],
                         importance: .important
                     ),
@@ -347,7 +423,7 @@ struct ProgressBarView: View {
                 // Main content - unaffected by help mode
                 Button(action: {
                     // Only trigger action if not in help mode
-                    if !HelpSystem.shared.isHelpModeActive {
+                    if !helpSystem.isHelpModeActive {
                         // Initialize editable target with current value
                         editableTarget = "\(dailyTarget)"
                         isEditingTarget = true
@@ -369,10 +445,10 @@ struct ProgressBarView: View {
                 .buttonStyle(PlainButtonStyle())
                 
                 // Help mode overlay
-                if HelpSystem.shared.isHelpModeActive {
+                if helpSystem.isHelpModeActive {
                     // Invisible help button
                     Button(action: {
-                        HelpSystem.shared.highlightElement("target-indicator")
+                        helpSystem.highlightElement("target-points-display")
                     }) {
                         Capsule()
                             .fill(Color.clear)
@@ -382,42 +458,39 @@ struct ProgressBarView: View {
                     .buttonStyle(PlainButtonStyle())
                     
                     // Show highlight when selected
-                    if HelpSystem.shared.isElementHighlighted("target-indicator") {
+                    if helpSystem.isElementHighlighted("target-points-display") {
                         Capsule()
                             .stroke(Color.blue, lineWidth: 2)
                             .frame(width: 50, height: 26) // 2px larger than the 48×24 pill
                     }
                 }
-            }
-            .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
-            // Register with help system
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    // Register approximate frame based on targetPosition
-                    let targetFrame = CGRect(
-                        x: targetPosition - 24, // Half of pill width
-                        y: -20, // Offset
-                        width: 48, // Pill width
-                        height: 24 // Pill height
-                    )
-                    
-                    HelpSystem.shared.registerElement(
-                        id: "target-indicator",
-                        metadata: HelpMetadata(
-                            id: "target-indicator",
-                            title: "Daily Target",
-                            description: "Your daily point goal shown as a green marker.",
-                            usageHints: [
-                                "Tap this green bubble to change your daily target",
-                                "Reaching your target completes your day",
-                                "The app will remember your target setting"
-                            ],
-                            importance: .important
-                        ),
-                        frame: targetFrame
-                    )
+                
+                // Register with help system for metadata for the target bubble
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                helpSystem.registerElement(
+                                    id: "target-points-display",
+                                    metadata: HelpMetadata(
+                                        id: "target-points-display",
+                                        title: "Target Display",
+                                        description: "Shows your daily points goal in a green pill.",
+                                        usageHints: [
+                                            "Tap to change your daily target value",
+                                            "The green marker shows where this goal sits on the bar",
+                                            "Default is 100 points but can be customized",
+                                            "Reaching this value completes your day"
+                                        ],
+                                        importance: .important
+                                    ),
+                                    frame: geo.frame(in: .global)
+                                )
+                            }
+                        }
                 }
             }
+            .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
         }
         .position(x: targetPosition, y: geometry.size.height / 2)
     }
@@ -449,10 +522,10 @@ struct ProgressBarView: View {
                 }
                 
                 // Help mode overlay
-                if HelpSystem.shared.isHelpModeActive {
+                if helpSystem.isHelpModeActive {
                     // Invisible help button
                     Button(action: {
-                        HelpSystem.shared.highlightElement("points-indicator")
+                        helpSystem.highlightElement("total-points-display")
                     }) {
                         let width: CGFloat = displayPoints > 999 ? 64 : 52 // Slightly larger for easier tap
                         Capsule()
@@ -463,43 +536,41 @@ struct ProgressBarView: View {
                     .buttonStyle(PlainButtonStyle())
                     
                     // Show highlight when selected
-                    if HelpSystem.shared.isElementHighlighted("points-indicator") {
+                    if helpSystem.isElementHighlighted("total-points-display") {
                         let width: CGFloat = displayPoints > 999 ? 62 : 50 // 2px larger than the original
                         Capsule()
                             .stroke(Color.blue, lineWidth: 2)
                             .frame(width: width, height: 26)
                     }
                 }
-            }
-            .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
-            // Register with help system
-            .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    let width: CGFloat = displayPoints > 999 ? 60 : 48
-                    let pointsFrame = CGRect(
-                        x: displayPoints > 0 ? indicatorPosition - width/2 : -width/2, // Center based on indicator position
-                        y: -20, // Offset
-                        width: width, // Pill width
-                        height: 24 // Pill height
-                    )
-                    
-                    HelpSystem.shared.registerElement(
-                        id: "points-indicator",
-                        metadata: HelpMetadata(
-                            id: "points-indicator",
-                            title: "Current Points",
-                            description: "Shows your total earned points for the day.",
-                            usageHints: [
-                                "The bubble color matches the progress bar section",
-                                "Gold before reaching target, blue when exceeding target",
-                                "Updates in real-time as you complete tasks"
-                            ],
-                            importance: .important
-                        ),
-                        frame: pointsFrame
-                    )
+                
+                // Register with help system for metadata for the points bubble
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                let width: CGFloat = displayPoints > 999 ? 60 : 48
+                                helpSystem.registerElement(
+                                    id: "total-points-display",
+                                    metadata: HelpMetadata(
+                                        id: "total-points-display",
+                                        title: "Total Points",
+                                        description: "Shows your current total points earned today.",
+                                        usageHints: [
+                                            "Updates in real-time as you complete tasks",
+                                            "Gold color before reaching target",
+                                            "Blue color when exceeding target",
+                                            "Moves along the progress bar as you earn points"
+                                        ],
+                                        importance: .important
+                                    ),
+                                    frame: geo.frame(in: .global)
+                                )
+                            }
+                        }
                 }
             }
+            .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
         }
         .position(x: displayPoints > 0 ? indicatorPosition : 0, y: geometry.size.height / 2) // Place at far left (0) when points are 0
     }
