@@ -247,7 +247,8 @@ struct HelpOverlayModifier: ViewModifier {
                                    metadata.id == "progress-bar-to-target" ||
                                    metadata.id == "progress-bar-beyond-target" ||
                                    metadata.id == "target-indicator" ||
-                                   metadata.id == "points-indicator" {
+                                   metadata.id == "points-indicator" ||
+                                   metadata.id == "info-button" {
                                 // No highlight here - handled directly in the component
                                 Color.clear.frame(width: 0, height: 0)
                             }
@@ -367,16 +368,67 @@ struct HelpModeOverlay: View {
                     
                     // Controls - always visible at top right
                     HStack(spacing: 16) {
-                        // Info button - clearly visible
-                        Button(action: {
-                            withAnimation(.spring()) {
-                                showingTutorial.toggle()
+                        // Info button - clearly visible with minimal frame
+                        ZStack {
+                            Button(action: {
+                                if !helpSystem.isHelpModeActive {
+                                    withAnimation(.spring()) {
+                                        showingTutorial.toggle()
+                                    }
+                                }
+                            }) {
+                                Image(systemName: showingTutorial ? "info.circle.fill" : "info.circle")
+                                    .font(.system(size: 22))
+                                    .foregroundColor(.blue)
+                                    .frame(width: 28, height: 28) // Tight frame around the icon
                             }
-                        }) {
-                            Image(systemName: showingTutorial ? "info.circle.fill" : "info.circle")
-                                .font(.system(size: 22))
-                                .foregroundColor(.blue)
+                            .disabled(helpSystem.isHelpModeActive)
+                            
+                            // Help mode overlay
+                            if helpSystem.isHelpModeActive {
+                                // Invisible button for help mode
+                                Button(action: {
+                                    helpSystem.highlightElement("info-button")
+                                }) {
+                                    Rectangle()
+                                        .fill(Color.white.opacity(0.001))
+                                        .frame(width: 28, height: 28) // Exact same size as button
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .zIndex(100)
+                                
+                                // Show highlight when specifically highlighted
+                                if helpSystem.isElementHighlighted("info-button") {
+                                    Circle()
+                                        .stroke(Color.blue, lineWidth: 2)
+                                        .frame(width: 28, height: 28) // Tight circle highlight
+                                        .zIndex(99)
+                                }
+                            }
                         }
+                        .overlay(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        helpSystem.registerElement(
+                                            id: "info-button",
+                                            metadata: HelpMetadata(
+                                                id: "info-button",
+                                                title: "Info Button",
+                                                description: "Shows additional help information",
+                                                usageHints: [
+                                                    "Tap for more detailed tips and guidance",
+                                                    "Provides extended information for highlighted elements",
+                                                    "Context-sensitive based on the selected element"
+                                                ],
+                                                importance: .informational
+                                            ),
+                                            frame: geo.frame(in: .global)
+                                        )
+                                    }
+                            }
+                        )
                         
                         // X button - very visible in top right
                         Button(action: {
