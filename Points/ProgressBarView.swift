@@ -8,11 +8,25 @@ struct ProgressBarView: View {
     @State private var isEditingTarget: Bool = false // Track if target is being edited
     @State private var editableTarget: String = "100" // For editing with keyboard
     
+    // Points value passed from parent
+    var actualPoints: Int = 0
+    
+    // For internal rendering and animation
+    @State private var animatedPointsValue: Double = 0
+    
+    // Add a dedicated property for the displayed text value
+    // This will animate independently of the position
+    @State private var displayedTextValue: Int = 0
+    
+    // Animation configuration for consistent animations - faster but still visible
+    private let pointsAnimation = Animation.easeInOut(duration: 0.5)
+    
     // Custom green color for target marker
     private let darkGreenColor = Color(red: 0.2, green: 0.6, blue: 0.4) // Vibrant green that fits better with the palette
     
-    init(progress: Binding<Float> = .constant(0)) {
+    init(progress: Binding<Float> = .constant(0), actualPoints: Int = 0) {
         self._progress = progress
+        self.actualPoints = actualPoints
     }
     
     var body: some View {
@@ -27,17 +41,25 @@ struct ProgressBarView: View {
                     let progressWidth = geometry.size.width * CGFloat(progress)
                     let isOverTarget = progressWidth > targetPosition
                     
-                    // Calculate estimated points
-                    let targetRatioFloat = Float(dailyTarget) / 150.0
-                    let estimatedPoints: Int = calculateEstimatedPoints(
-                        progress: progress,
-                        targetRatioFloat: targetRatioFloat,
-                        dailyTarget: dailyTarget
-                    )
+                    // Use the animated points value for smooth transitions
+                    let displayPoints: Int = Int(animatedPointsValue.rounded())
                     
-                    // Determine indicator position and color
-                    let indicatorPosition = min(progressWidth, geometry.size.width - 24) // Prevent overflow
-                    let indicatorColor: Color = isOverTarget ? theme.dataTab : theme.templateTab
+                    // Create an animating number formatter
+                    var formatter: NumberFormatter = {
+                        let f = NumberFormatter()
+                        f.numberStyle = .decimal
+                        f.maximumFractionDigits = 0
+                        return f
+                    }()
+                    
+                    // Calculate indicator position based on animated points, not progress width
+                    let targetRatioFloat = Float(dailyTarget) / 150.0 // Same scaling as in target position calculation
+                    let pointsProgressRatio = min(Float(animatedPointsValue) / Float(dailyTarget), 1.0)
+                    let normalizedProgress = pointsProgressRatio * targetRatioFloat
+                    
+                    // Calculate position as a direct mapping of points to width
+                    let indicatorPosition = min(CGFloat(normalizedProgress) * geometry.size.width, geometry.size.width - 24) // Prevent overflow
+                    let indicatorColor: Color = displayPoints >= dailyTarget ? theme.dataTab : theme.templateTab
                     
                     // Background - full width rectangle with minimal rounding
                     ZStack {
@@ -58,57 +80,63 @@ struct ProgressBarView: View {
                         importance: .informational
                     ))
                     
-                    // Progress fill up to target with proper alignment
-                    if progressWidth > 0 {
-                        // Gold progress section - properly aligned to left edge
-                        Rectangle()
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        theme.templateTab,
-                                        theme.templateTab.opacity(0.85)
-                                    ]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
+                    // Progress fill up to target - calculate width based on actual points
+                    let actualProgressWidth = CGFloat(normalizedProgress) * geometry.size.width
+                    
+                    // Gold progress section - properly aligned to left edge
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    theme.templateTab,
+                                    theme.templateTab.opacity(0.85)
+                                ]),
+                                startPoint: .leading,
+                                endPoint: .trailing
                             )
-                            .cornerRadius(2)
-                            .frame(width: min(progressWidth, targetPosition), height: geometry.size.height)
-                            .alignmentGuide(.leading) { _ in 0 } // Force alignment to left edge
-                            .contentShape(Rectangle())
+                        )
+                        .cornerRadius(2)
+                        .frame(width: min(max(0, actualProgressWidth), targetPosition), height: geometry.size.height)
+                        .alignmentGuide(.leading) { _ in 0 } // Force alignment to left edge
+                        // Removed per-element animation in favor of parent withAnimation
+                        .contentShape(Rectangle())
+                    .helpMetadata(HelpMetadata(
+                        id: "progress-bar-to-target",
+                        title: "Progress to Target",
+                        description: "This gold section shows your progress toward your daily target.",
+                        usageHints: [
+                            "Fills from left to right as you earn points",
+                            "Turns completely gold when you reach your target"
+                        ],
+                        importance: .important
+                    ))
+                    
+                    // Additional progress beyond target - data tab color
+                    if animatedPointsValue > Double(dailyTarget) {
+                        // Calculate width based on animated points value
+                        let beyondTargetRatio = min(Float(animatedPointsValue - Double(dailyTarget)) / 150.0, 1.0)
+                        let beyondTargetWidth = CGFloat(beyondTargetRatio) * geometry.size.width
+                        
+                        ZStack {
+                            Rectangle()
+                                .fill(theme.dataTab)
+                                .cornerRadius(2)
+                                .frame(width: beyondTargetWidth, height: geometry.size.height)
+                                // Removed per-element animation in favor of parent withAnimation
+                        }
+                        .position(x: (beyondTargetWidth / 2) + targetPosition, y: geometry.size.height / 2)
+                        .contentShape(Rectangle())
                         .helpMetadata(HelpMetadata(
-                            id: "progress-bar-to-target",
-                            title: "Progress to Target",
-                            description: "This gold section shows your progress toward your daily target.",
+                            id: "progress-bar-beyond-target",
+                            title: "Points Beyond Target",
+                            description: "This blue section shows points earned beyond your daily target.",
                             usageHints: [
-                                "Fills from left to right as you earn points",
-                                "Turns completely gold when you reach your target"
+                                "Celebrates overachievement!",
+                                "Shows how far you've exceeded your goal",
+                                "Different color indicates bonus points"
                             ],
                             importance: .important
                         ))
-                        
-                        // Additional progress beyond target - data tab color
-                        if isOverTarget {
-                            ZStack {
-                                Rectangle()
-                                    .fill(theme.dataTab)
-                                    .cornerRadius(2)
-                                    .frame(width: progressWidth - targetPosition, height: geometry.size.height)
-                            }
-                            .position(x: (progressWidth - targetPosition) / 2 + targetPosition, y: geometry.size.height / 2)
-                            .contentShape(Rectangle())
-                            .helpMetadata(HelpMetadata(
-                                id: "progress-bar-beyond-target",
-                                title: "Points Beyond Target",
-                                description: "This blue section shows points earned beyond your daily target.",
-                                usageHints: [
-                                    "Celebrates overachievement!",
-                                    "Shows how far you've exceeded your goal",
-                                    "Different color indicates bonus points"
-                                ],
-                                importance: .important
-                            ))
-                        }
                     }
                     
                     // Target marker/indicator
@@ -153,54 +181,79 @@ struct ProgressBarView: View {
                     }
                     .position(x: targetPosition, y: geometry.size.height / 2)
                     
-                    // Current points indicator
-                    if estimatedPoints > 0 {
+                    // Current points indicator - show even at 0
+                    ZStack {
+                        // Points decoration line
+                        Rectangle()
+                            .fill(indicatorColor)
+                            .frame(width: 3, height: geometry.size.height + 10)
+                        
+                        // Current points bubble
                         ZStack {
-                            // Points decoration line
-                            Rectangle()
+                            // Background pill
+                            Capsule()
                                 .fill(indicatorColor)
-                                .frame(width: 3, height: geometry.size.height + 10)
+                                .frame(width: displayPoints > 999 ? 60 : 48, height: 24)
+                                .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
                             
-                            // Current points bubble
-                            ZStack {
-                                // Background pill
-                                Capsule()
-                                    .fill(indicatorColor)
-                                    .frame(width: estimatedPoints > 999 ? 60 : 48, height: 24)
-                                    .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
-                                
-                                // Points value
-                                Text("\(estimatedPoints)")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .minimumScaleFactor(0.8)
-                            }
-                            .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
-                            .helpMetadata(HelpMetadata(
-                                id: "points-indicator",
-                                title: "Current Points",
-                                description: "Shows your total earned points for the day.",
-                                usageHints: [
-                                    "The bubble color matches the progress bar section",
-                                    "Gold before reaching target, blue when exceeding target",
-                                    "Updates in real-time as you complete tasks"
-                                ],
-                                importance: .important
-                            ))
+                            // Always show the value from our displayedTextValue property
+                            Text("\(displayedTextValue)")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.white)
+                                .minimumScaleFactor(0.8)
+                                // Important: Do not use any transition or animation on the Text itself
+                                .id("staticPointsDisplay")
                         }
-                        .position(x: indicatorPosition, y: geometry.size.height / 2)
-                        .animation(.spring(response: 0.4, dampingFraction: 0.7), value: indicatorPosition)
+                        .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
+                        .helpMetadata(HelpMetadata(
+                            id: "points-indicator",
+                            title: "Current Points",
+                            description: "Shows your total earned points for the day.",
+                            usageHints: [
+                                "The bubble color matches the progress bar section",
+                                "Gold before reaching target, blue when exceeding target",
+                                "Updates in real-time as you complete tasks"
+                            ],
+                            importance: .important
+                        ))
                     }
+                    .position(x: displayPoints > 0 ? indicatorPosition : 0, y: geometry.size.height / 2) // Place at far left (0) when points are 0
                 }
             }
             .frame(height: 20) // Reduced height by 16.7%
             // Apply a consistent Z-index to ensure proper layering in help mode
             .zIndex(10) // Ensure progress bar is properly layered
+            // Removed implicit animation - relying on explicit withAnimation for better control
         }
         .padding(.horizontal, 0) // No horizontal padding - truly full width
         .onAppear {
             // Get daily target from CoreData
             loadDailyTarget()
+            
+            // Initialize both animated value and displayed text value
+            animatedPointsValue = Double(actualPoints)
+            displayedTextValue = actualPoints
+            
+            print("ProgressBarView appeared with points: \(actualPoints)")
+        }
+        // Watch for changes to actualPoints and animate accordingly
+        .onChange(of: actualPoints) { newValue in
+            print("Points changed: \(animatedPointsValue) -> \(newValue)")
+            
+            // CRITICAL: Do not change displayed text until animation completes
+            // Start only with position animation, keeping old text value
+            withAnimation(Animation.easeInOut(duration: 0.5)) {
+                // Update position animation value immediately
+                animatedPointsValue = Double(newValue)
+                
+                // Animate position only, text will update after animation completes
+            }
+            
+            // After animation is complete, update the displayed text value
+            // No animation on the text value itself, just a delayed update
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                displayedTextValue = newValue
+            }
         }
         // Present numeric keyboard when editing target
         .sheet(isPresented: $isEditingTarget) {
@@ -294,8 +347,9 @@ struct ProgressBarView: View {
         }
     }
     
-    // Calculate points based on progress and target
-    private func calculateEstimatedPoints(progress: Float, targetRatioFloat: Float, dailyTarget: Int) -> Int {
+    // No longer needed - we use actual points directly
+    // Kept for reference in case we need to revert
+    private func _calculateEstimatedPoints(progress: Float, targetRatioFloat: Float, dailyTarget: Int) -> Int {
         if progress <= targetRatioFloat {
             // Before target: calculate as portion of target (scales linearly to target)
             return Int((progress / targetRatioFloat) * Float(dailyTarget))
@@ -344,3 +398,5 @@ struct ProgressBarView_Previews: PreviewProvider {
             .padding()
     }
 }
+
+// No longer need custom AnimatingNumber - using visibility toggle approach instead

@@ -409,6 +409,13 @@ struct TaskNavigationView: View {
     @State private var currentDate = Calendar.current.startOfDay(for: Date())
     @State private var currentDateEntity: CoreDataDate?
     @State private var progress: Float = 0
+    @State private var forceProgressBarUpdate: UUID = UUID() // Add a state variable to force UI updates
+    
+    // Add a separate state for UI display of points that can animate independently
+    @State private var displayedPoints: Int = 0
+    @State private var actualDatabasePoints: Int = 0
+    @State private var isAnimatingPoints: Bool = false
+    
     @ObservedObject private var taskControllers = TaskControllers.shared
     
     var body: some View {
@@ -424,12 +431,21 @@ struct TaskNavigationView: View {
                 if let dateValue = dateEntity.date {
                     self.currentDate = dateValue
                     
-                    // Update points display when date changes
+                    // Update points display when date changes - no animation needed for date change
                     if let points = dateEntity.points as? NSDecimalNumber {
+                        let pointsValue = points.intValue
+                        
+                        // Update both actual and displayed points without animation for date change
+                        self.actualDatabasePoints = pointsValue
+                        self.displayedPoints = pointsValue
+                        
                         NotificationCenter.default.post(
                             name: Constants.Notifications.updatePointsDisplay,
                             object: nil,
-                            userInfo: ["points": points.intValue]
+                            userInfo: [
+                                "points": pointsValue,
+                                "animationComplete": true
+                            ]
                         )
                     }
                 }
@@ -440,7 +456,11 @@ struct TaskNavigationView: View {
             // Compact container with minimal but consistent spacing
             VStack(spacing: 2) { // Add a tiny 2pt gap for visual separation
                 // Full-width progress bar with daily target - dropped down by 10px
-                ProgressBarView(progress: $progress)
+                ProgressBarView(
+                    progress: $progress,
+                    actualPoints: displayedPoints // Use our animated display points
+                )
+                .id(forceProgressBarUpdate) // Force view to recreate when points update
                     .padding(.top, 10) // Drop the entire progress bar down by 10px
                 
                 // Add the CreateTabsView below the progress bar with minimal spacing
@@ -453,12 +473,34 @@ struct TaskNavigationView: View {
                     TaskListContainer(
                         dateEntity: dateEntity,
                         onPointsUpdated: { points in
-                            // Update points display
-                            NotificationCenter.default.post(
-                                name: Constants.Notifications.updatePointsDisplay,
-                                object: nil,
-                                userInfo: ["points": points]
-                            )
+                            // Update actual database points immediately
+                            actualDatabasePoints = points
+                            
+                            // Set a flag that we're animating points
+                            isAnimatingPoints = true
+                            
+                            // Use high priority transaction with faster animation
+                            // This prevents any other UI updates from interrupting this animation
+                            DispatchQueue.main.async {
+                                withAnimation(Animation.easeInOut(duration: 0.5)) {
+                                    displayedPoints = points
+                                }
+                            }
+                            
+                            // Delay other notifications until after animation is complete, matching animation duration
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                isAnimatingPoints = false
+                                
+                                // Send notification for other UI components with animation complete flag
+                                NotificationCenter.default.post(
+                                    name: Constants.Notifications.updatePointsDisplay,
+                                    object: nil,
+                                    userInfo: [
+                                        "points": points,
+                                        "animationComplete": true
+                                    ]
+                                )
+                            }
                         },
                         onProgressUpdated: { newProgress in
                             // Update the progress binding with animation
@@ -480,6 +522,30 @@ struct TaskNavigationView: View {
         }
         .onAppear {
             initializeForToday()
+            
+            // Listen for points updates to force UI refresh with animation
+            NotificationCenter.default.addObserver(forName: Constants.Notifications.updatePointsDisplay, object: nil, queue: .main) { [self] notification in
+                // Look for the points value in the notification
+                if let userInfo = notification.userInfo,
+                   let newPoints = userInfo["points"] as? Int {
+                    
+                    // Check if animation is complete (this notification is from after animation)
+                    let animationComplete = userInfo["animationComplete"] as? Bool ?? false
+                    
+                    // Only force update if animation is complete - avoid glitches during animation
+                    if animationComplete {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                            forceProgressBarUpdate = UUID()
+                        }
+                    }
+                    
+                    // Log the points value to debug
+                    print("Received points update notification: \(newPoints) points (animation complete: \(animationComplete))")
+                } else {
+                    // Fallback if no points value is found
+                    forceProgressBarUpdate = UUID()
+                }
+            }
         }
     }
     
@@ -496,12 +562,20 @@ struct TaskNavigationView: View {
             // Ensure we have tasks for today
             dateHelper.ensureTasksExist(for: dateEntity)
             
-            // Update points display
+            // Update points display - initialize both actual and displayed points
             if let points = dateEntity.points as? NSDecimalNumber {
+                let pointsValue = points.intValue
+                self.actualDatabasePoints = pointsValue
+                self.displayedPoints = pointsValue // No animation on initial load
+                
+                // Notify other components
                 NotificationCenter.default.post(
                     name: Constants.Notifications.updatePointsDisplay,
                     object: nil,
-                    userInfo: ["points": points.intValue]
+                    userInfo: [
+                        "points": pointsValue,
+                        "animationComplete": true
+                    ]
                 )
             }
         }

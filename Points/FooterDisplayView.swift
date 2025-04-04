@@ -16,9 +16,15 @@ class PointsObserver: ObservableObject {
     }
     
     @objc func updatePoints(notification: Notification) {
-        if let userInfo = notification.userInfo, let points = userInfo["points"] as? Int {
-            DispatchQueue.main.async {
-                self.points = points
+        if let userInfo = notification.userInfo, 
+           let points = userInfo["points"] as? Int,
+           let animationComplete = userInfo["animationComplete"] as? Bool {
+            
+            // Only update points if animation is complete or explicitly marked as complete
+            if animationComplete {
+                DispatchQueue.main.async {
+                    self.points = points
+                }
             }
         }
     }
