@@ -16,7 +16,7 @@ struct ProgressBarView: View {
     }
     
     var body: some View {
-        // Progress bar with increased spacing to avoid overlap
+        // Compact progress bar with no extra spacing
         VStack(spacing: 0) {
             // Full-width rectangular progress bar with target indicator
             GeometryReader { geometry in
@@ -44,6 +44,16 @@ struct ProgressBarView: View {
                         .fill(theme.progressBackground)
                         .cornerRadius(2)
                         .frame(width: geometry.size.width, height: geometry.size.height)
+                        .helpMetadata(HelpMetadata(
+                            id: "progress-bar-base",
+                            title: "Progress Bar Background",
+                            description: "The gray background represents the full scale of possible points.",
+                            usageHints: [
+                                "The progress bar shows 0 to about 300 points",
+                                "Your daily target appears as a green vertical line"
+                            ],
+                            importance: .informational
+                        ))
                     
                     Group {
                         // Progress fill up to target - gold color
@@ -60,6 +70,16 @@ struct ProgressBarView: View {
                             )
                             .cornerRadius(2)
                             .frame(width: min(progressWidth, targetPosition), height: geometry.size.height)
+                            .helpMetadata(HelpMetadata(
+                                id: "progress-bar-to-target",
+                                title: "Progress to Target",
+                                description: "This gold section shows your progress toward your daily target.",
+                                usageHints: [
+                                    "Fills from left to right as you earn points",
+                                    "Turns completely gold when you reach your target"
+                                ],
+                                importance: .important
+                            ))
                         
                         // Additional progress beyond target - data tab color
                         if isOverTarget {
@@ -68,6 +88,17 @@ struct ProgressBarView: View {
                                 .cornerRadius(2)
                                 .frame(width: progressWidth - targetPosition, height: geometry.size.height)
                                 .offset(x: targetPosition)
+                                .helpMetadata(HelpMetadata(
+                                    id: "progress-bar-beyond-target",
+                                    title: "Points Beyond Target",
+                                    description: "This blue section shows points earned beyond your daily target.",
+                                    usageHints: [
+                                        "Celebrates overachievement!",
+                                        "Shows how far you've exceeded your goal",
+                                        "Different color indicates bonus points"
+                                    ],
+                                    importance: .important
+                                ))
                         }
                     }
                     
@@ -98,7 +129,18 @@ struct ProgressBarView: View {
                             }
                         }
                         .buttonStyle(PlainButtonStyle()) // Remove button styling
-                        .offset(y: -24) // Position higher above progress bar
+                        .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
+                        .helpMetadata(HelpMetadata(
+                            id: "target-indicator",
+                            title: "Daily Target",
+                            description: "Your daily point goal shown as a green marker.",
+                            usageHints: [
+                                "Tap this green bubble to change your daily target",
+                                "Reaching your target completes your day",
+                                "The app will remember your target setting"
+                            ],
+                            importance: .important
+                        ))
                     }
                     .position(x: targetPosition, y: geometry.size.height / 2)
                     
@@ -124,14 +166,25 @@ struct ProgressBarView: View {
                                     .foregroundColor(.white)
                                     .minimumScaleFactor(0.8)
                             }
-                            .offset(y: -24)
+                            .offset(y: -20) // Reduced offset by 4pt (16.7% reduction)
+                            .helpMetadata(HelpMetadata(
+                                id: "points-indicator",
+                                title: "Current Points",
+                                description: "Shows your total earned points for the day.",
+                                usageHints: [
+                                    "The bubble color matches the progress bar section",
+                                    "Gold before reaching target, blue when exceeding target",
+                                    "Updates in real-time as you complete tasks"
+                                ],
+                                importance: .important
+                            ))
                         }
                         .position(x: indicatorPosition, y: geometry.size.height / 2)
                         .animation(.spring(response: 0.4, dampingFraction: 0.7), value: indicatorPosition)
                     }
                 }
             }
-            .frame(height: 24) // Maintain taller progress bar
+            .frame(height: 20) // Reduced height by 16.7%
         }
         .padding(.horizontal, 0) // No horizontal padding - truly full width
         .onAppear {

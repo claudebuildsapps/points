@@ -23,6 +23,18 @@ struct CreateTabsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(theme.routinesTab)
             }
+            .helpMetadata(HelpMetadata(
+                id: "create-routine-button",
+                title: "Create Routine Button",
+                description: "Creates a new routine - a recurring task that you do regularly.",
+                usageHints: [
+                    "Routines are typically daily habits",
+                    "Routines award points when completed",
+                    "Routines have target completion counts",
+                    "Use for activities like workouts, meditation, etc."
+                ],
+                importance: .important
+            ))
             
             // +Task tab
             Button(action: {
@@ -36,6 +48,18 @@ struct CreateTabsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(theme.tasksTab)
             }
+            .helpMetadata(HelpMetadata(
+                id: "create-task-button",
+                title: "Create Task Button",
+                description: "Creates a new regular task - a one-time to-do item.",
+                usageHints: [
+                    "Tasks are typically one-time actions",
+                    "Tasks award points when completed",
+                    "Complete all your tasks to reach your daily target",
+                    "Use for activities like 'Send email' or 'Call John'"
+                ],
+                importance: .important
+            ))
             
             // +Critical tab
             Button(action: {
@@ -49,8 +73,20 @@ struct CreateTabsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(theme.criticalColor)
             }
+            .helpMetadata(HelpMetadata(
+                id: "create-critical-button",
+                title: "Create Critical Task Button",
+                description: "Creates a new critical task - an important, high-priority to-do item.",
+                usageHints: [
+                    "Critical tasks stand out with special styling",
+                    "Use for urgent or high-priority items",
+                    "Critical tasks are great for deadlines",
+                    "They have the same point value as regular tasks"
+                ],
+                importance: .important
+            ))
         }
-        .frame(height: 40)
+        .frame(height: 36) // Reduced height by 10%
         .sheet(isPresented: $showCreateTaskSheet) {
             TaskFormView(
                 mode: .create,
@@ -63,10 +99,10 @@ struct CreateTabsView: View {
                     let title = values["title"] as? String ?? (createAsRoutine ? "New Routine" : "New Task")
                     let points = values["points"] as? NSDecimalNumber ?? 
                         NSDecimalNumber(value: createAsRoutine ? 3.0 : Constants.Defaults.taskPoints)
-                    let target = values["target"] as? Int16 ?? Constants.Defaults.taskTarget
+                    let target = values["target"] as? Int16 ?? Int16(Constants.Defaults.taskTarget)
                     let reward = values["reward"] as? NSDecimalNumber ?? 
                         NSDecimalNumber(value: createAsRoutine ? 1.0 : 0.0)
-                    let max = values["max"] as? Int16 ?? Constants.Defaults.taskMax
+                    let max = values["max"] as? Int16 ?? Int16(Constants.Defaults.taskMax)
                     let isRoutine = values["routine"] as? Bool ?? createAsRoutine
                     let isOptional = values["optional"] as? Bool ?? true
                     let isCritical = values["critical"] as? Bool ?? createAsCritical
@@ -194,6 +230,16 @@ struct DateNavigationView: View {
                 .foregroundColor(theme.templateTab)
                 .frame(width: 44, height: 44)
         }
+        .helpMetadata(HelpMetadata(
+            id: "date-navigation-\(direction == .forward ? "forward" : "back")",
+            title: "Date Navigation",
+            description: "Navigate to \(direction == .forward ? "the next day" : "the previous day").",
+            usageHints: [
+                "Tap to move \(direction == .forward ? "forward" : "backward") one day",
+                "You can view and manage tasks for any date"
+            ],
+            importance: .informational
+        ))
     }
     
     // Change the current date

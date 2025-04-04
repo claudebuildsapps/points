@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import Combine
 
 // Global task manager and date helper - a simple way to access task actions from anywhere
 class TaskControllers: ObservableObject {
@@ -70,6 +71,7 @@ struct MainView: View {
     @State private var lastTabSelection = 0 // Track last tab selection to handle filter toggling
     @State private var showDeleteConfirmation = false // Confirmation for deleting all tasks
     @ObservedObject private var taskControllers = TaskControllers.shared
+    @ObservedObject private var helpSystem = HelpSystem.shared // Observe help system changes
     
     // Called when the view appears - this ensures we're using system setting
     private func initializeTheme() {
@@ -81,8 +83,20 @@ struct MainView: View {
     
     var body: some View {
         ZStack(alignment: .bottom) {
-            // Main content (fills entire screen except for footer)
+            // Main content that adjusts when help mode is active
             VStack(spacing: 0) {
+                // Direct help panel monitoring with compact design
+                if helpSystem.isHelpModeActive {
+                    HelpModeOverlay()
+                        .frame(minHeight: 50, idealHeight: 60, maxHeight: 160) // Reduced height range by ~25%
+                        .padding(.horizontal, 8) 
+                        .padding(.bottom, 2) // Reduced spacing by 50%
+                        .padding(.top, 2) // Reduced spacing by 50%
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                
+                // Main content (compressed when help mode is active)
+                VStack(spacing: 0) {
                 if selectedTab == 0 {
                     TaskNavigationView()
                         .environment(\.managedObjectContext, context)
@@ -114,6 +128,7 @@ struct MainView: View {
                 }
                 .frame(height: 0)
                 .padding(.bottom, 86) // Space for footer (44 for buttons + 42 for tabs)
+                }
             }
             
             // Footer at the bottom (now includes both buttons and tabs)
@@ -202,10 +217,16 @@ struct MainView: View {
         .onAppear {
             // Initialize theme based on system settings
             initializeTheme()
+            // Debug current help system state
+            print("MainView appeared - Help mode active: \(helpSystem.isHelpModeActive)")
         }
         // Update the theme based on system color scheme when following system settings
         .onChange(of: systemColorScheme) { newColorScheme in
             themeManager.updateForSystemColorScheme(newColorScheme)
+        }
+        // React to changes in help mode
+        .onChange(of: helpSystem.isHelpModeActive) { isActive in
+            print("Help mode changed to: \(isActive)")
         }
         // Delete confirmation dialog
         .alert(isPresented: $showDeleteConfirmation) {
@@ -275,10 +296,10 @@ struct MainView: View {
                     let title = values["title"] as? String ?? (defaultRoutine ? "New Routine" : "New Task")
                     let points = values["points"] as? NSDecimalNumber ?? 
                         NSDecimalNumber(value: defaultRoutine ? 3.0 : Constants.Defaults.taskPoints)
-                    let target = values["target"] as? Int16 ?? Constants.Defaults.taskTarget
+                    let target = values["target"] as? Int16 ?? Int16(Constants.Defaults.taskTarget)
                     let reward = values["reward"] as? NSDecimalNumber ?? 
                         NSDecimalNumber(value: defaultRoutine ? 1.0 : 0.0)
-                    let max = values["max"] as? Int16 ?? Constants.Defaults.taskMax
+                    let max = values["max"] as? Int16 ?? Int16(Constants.Defaults.taskMax)
                     // Use the form's actual isRoutine value, with defaultRoutine as fallback
                     let isRoutine = values["routine"] as? Bool ?? defaultRoutine
                     let isOptional = values["optional"] as? Bool ?? true
@@ -416,17 +437,16 @@ struct TaskNavigationView: View {
                 }
             })
             .environment(\.managedObjectContext, context)
-            .frame(height: 50) // Reduced height as tab bar was removed
+            .frame(height: 45) // Further reduced height for compactness
             
-            // Custom container to ensure progress bar touches list
+            // Compact container with minimal spacing
             VStack(spacing: 0) {
-                // Full-width progress bar with daily target
+                // Full-width progress bar with daily target - no extra padding
                 ProgressBarView(progress: $progress)
                 
-                // Add the CreateTabsView directly below the progress bar
+                // Add the CreateTabsView directly below the progress bar - no gap
                 CreateTabsView()
                     .environment(\.managedObjectContext, context)
-                    .padding(0) // Ensure no padding
                 
                 // Task list with absolutely no spacing
                 if let dateEntity = currentDateEntity {
@@ -447,7 +467,6 @@ struct TaskNavigationView: View {
                             }
                         }
                     )
-                    .padding(.top, 0) // Explicitly set top padding to zero
                 }
             }
             
