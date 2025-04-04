@@ -149,15 +149,13 @@ struct MainView: View {
                         }
                     },
                     onTaskButtonTapped: {
-                        // The blue + button ALWAYS creates a task
+                        // The blue book button now toggles help mode
                         
-                        // First set flag and then introduce a small delay
-                        createAsRoutine = false
-                        
-                        // Using DispatchQueue to ensure state is updated before presenting sheet
-                        DispatchQueue.main.async {
-                            showCreateTaskSheet = true
-                        }
+                        // Post notification to toggle help mode
+                        NotificationCenter.default.post(
+                            name: Constants.Notifications.toggleHelpMode,
+                            object: nil
+                        )
                     },
                     onHomeButtonTapped: {
                         // Home button always returns to the main tab and today's date

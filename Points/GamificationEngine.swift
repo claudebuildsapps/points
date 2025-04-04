@@ -114,41 +114,23 @@ class GamificationEngine {
         return min(Float(totalPoints) / Float(goal), 1.0)
     }
     
-    /// Calculate total points for a collection of tasks
+    /// Calculate total points for a collection of tasks - SIMPLIFIED CALCULATION
     /// - Parameter tasks: Array of tasks to calculate points for
     /// - Returns: Total points as an integer
     func calculateTotalPoints(for tasks: [CoreDataTask]) -> Int {
-        let total = tasks.reduce(0) { total, task in
-            // Calculate points based on the task's completion status using the more detailed calculation logic
-            // This prevents the 149-point issue with a 5-point task
+        // Reset calculation to bare minimum: sum of points * completions
+        var totalPoints = 0
+        
+        for task in tasks {
+            // Force cast to Double to ensure consistent handling
+            let pointsPerCompletion = Double(truncating: task.points ?? 0)
+            let completions = Double(task.completed)
             
-            // Convert to Task struct to use proper calculation logic
-            let taskStruct = Task.from(coreDataTask: task)
-            
-            // For completed tasks, use the full point value
-            // For non-routine tasks: all-or-nothing based on target
-            if !task.routine {
-                // If completed at least to target, award full points
-                if task.completed >= task.target {
-                    return total + Int(truncating: task.points ?? 0)
-                } else {
-                    return total // No points for incomplete non-routine tasks
-                }
-            } else {
-                // For routine tasks: scale points based on completion ratio
-                let completionRatio = min(
-                    Double(task.completed) / Double(task.target),
-                    Double(task.max) / Double(task.target)
-                )
-                
-                let scaledPoints = Int(Double(truncating: task.points ?? 0) * completionRatio)
-                
-                // Add any reward points
-                let rewardPoints = Int(truncating: task.reward ?? 0)
-                
-                return total + scaledPoints + rewardPoints
-            }
+            // Simple multiplication with no additional factors
+            let pointsForTask = Int(pointsPerCompletion * completions)
+            totalPoints += pointsForTask
         }
-        return total
+        
+        return totalPoints
     }
 }

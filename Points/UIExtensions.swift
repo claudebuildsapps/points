@@ -246,6 +246,7 @@ extension NSManagedObject {
 
 extension NotificationCenter {
     func postPointsUpdate(_ points: Int) {
+        print("=== POSTING POINTS UPDATE: \(points) ===")
         self.post(
             name: Constants.Notifications.updatePointsDisplay,
             object: nil,

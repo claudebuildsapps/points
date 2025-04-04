@@ -1,4 +1,5 @@
 import SwiftUI
+// Import HelpSystem for the help button metadata
 
 // Define a class to observe points updates
 class PointsObserver: ObservableObject {
@@ -82,8 +83,21 @@ struct FooterDisplayView: View {
             HStack(spacing: 0) {
                 // Purple + button - ALWAYS creates a Routine
                 tabButton(icon: "plus", color: theme.routinesTab, action: onRoutineButtonTapped)
-                // Blue + button - ALWAYS creates a Task
-                tabButton(icon: "plus", color: theme.tasksTab, action: onTaskButtonTapped)
+                // Blue book button - Help mode toggle
+                ZStack {
+                    tabButton(icon: "book.fill", color: theme.tasksTab, action: onTaskButtonTapped)
+                }
+                .helpMetadata(HelpMetadata(
+                    id: "help-button",
+                    title: "Help Mode Button",
+                    description: "Toggles the interactive help system on and off.",
+                    usageHints: [
+                        "Tap to enter help mode where you can explore the UI",
+                        "When in help mode, tap UI elements to learn what they do",
+                        "Tap this button again to exit help mode"
+                    ],
+                    importance: .important
+                ))
                 
                 // Home button in the center, positioned higher
                 HStack {

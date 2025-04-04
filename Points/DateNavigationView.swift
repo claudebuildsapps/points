@@ -196,13 +196,22 @@ struct DateNavigationView: View {
         .onChange(of: currentDate) { _ in updateDateEntity() }
     }
     
-    // Format date to "Month day number with suffix, year"
+    // Format date to "Today" if current date, otherwise "Month day number with suffix, year"
     private func formattedDate() -> String {
+        // Check if the date is today
+        let calendar = Calendar.current
+        let today = Date().startOfDay
+        
+        if calendar.isDate(currentDate, inSameDayAs: today) {
+            return "Today"
+        }
+        
+        // Format normally for other dates
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM d, yyyy"
         let baseString = formatter.string(from: currentDate)
         
-        let day = Calendar.current.component(.day, from: currentDate)
+        let day = calendar.component(.day, from: currentDate)
         let suffix = daySuffix(for: day)
         
         // Replace the day number with day number + suffix

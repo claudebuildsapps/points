@@ -286,7 +286,14 @@ class TaskManager {
     // MARK: - Points and Calculations
     
     func calculateTotalPoints(for tasks: [CoreDataTask]) -> Int {
-        return gamificationEngine.calculateTotalPoints(for: tasks)
+        // Bypass gamificationEngine to ensure consistent calculation
+        var totalPoints = 0
+        for task in tasks {
+            let pointsPerCompletion = Int(truncating: task.points ?? 0)
+            let completions = Int(task.completed)
+            totalPoints += pointsPerCompletion * completions
+        }
+        return totalPoints
     }
     
     // Update the points stored in a date entity
@@ -295,13 +302,30 @@ class TaskManager {
         
         // Fetch tasks for this date
         let tasks = fetchTasks(for: date)
-        let totalPoints = calculateTotalPoints(for: tasks)
         
-        // Update the date entity
+        // Calculate total points with the most basic formula: points * completions
+        var totalPoints = 0
+        
+        for task in tasks {
+            // Get points as integer
+            let pointsPerCompletion = Int(truncating: task.points ?? 0)
+            let numberOfCompletions = Int(task.completed)
+            
+            // Multiply points by completions - nothing else
+            totalPoints += (pointsPerCompletion * numberOfCompletions)
+        }
+        
+        // Clear debug output
+        print("POINTS UPDATE: Date \(date.date?.formatted() ?? "unknown"), Total Points: \(totalPoints)")
+        for task in tasks {
+            print("  - Task: \(task.title ?? "Unknown"), Points: \(task.points?.intValue ?? 0), Completions: \(task.completed)")
+        }
+        
+        // Update the date entity with exactly the points we just calculated
         date.points = NSDecimalNumber(value: totalPoints)
         saveContext()
         
-        // Send notification for UI updates
+        // Send notification with exactly the same points value
         NotificationCenter.default.postPointsUpdate(totalPoints)
     }
     
@@ -349,7 +373,7 @@ class TaskManager {
         if tasks.isEmpty { return 0 }
         
         let totalPoints = calculateTotalPoints(for: tasks)
-        let targetPoints = Int(date.target) * tasks.count
+        let targetPoints = Int(date.target) // Use the date's target directly
         
         return gamificationEngine.calculateProgress(totalPoints: totalPoints, goal: targetPoints)
     }

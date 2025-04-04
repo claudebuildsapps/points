@@ -243,7 +243,7 @@ struct DataTaskListView: View {
         case .tasks:
             predicate = NSPredicate(format: "routine == %@", NSNumber(value: false))
         case .routines:
-            predicate = NSPredicate(format: "routine == %@", NSNumber(value: true))
+            predicate = NSPredicate(format: "routine == %@ AND template == %@", NSNumber(value: true), NSNumber(value: false))
         case .none:
             predicate = nil
         }
@@ -260,6 +260,37 @@ struct DataTaskListView: View {
         )
     }
     
+    // Get deduplicated tasks - keep only one instance of each uniquely named routine
+    private var uniqueTasks: [CoreDataTask] {
+        if filterType == .routines {
+            // Create a dictionary to store unique routines by name
+            var uniqueRoutinesByName: [String: CoreDataTask] = [:]
+            
+            // For each task, keep the most recent instance of a routine with the same name
+            for task in tasks {
+                let taskName = task.title ?? "Untitled"
+                
+                // If we haven't seen this name yet OR 
+                // if this task is more recent (has a later date) than the one we've stored
+                if uniqueRoutinesByName[taskName] == nil || 
+                   (task.date?.date ?? Date()) > (uniqueRoutinesByName[taskName]?.date?.date ?? Date(timeIntervalSince1970: 0)) {
+                    uniqueRoutinesByName[taskName] = task
+                }
+            }
+            
+            // Convert dictionary values to an array and sort by date descending, then position
+            return uniqueRoutinesByName.values.sorted { 
+                if ($0.date?.date ?? Date()) != ($1.date?.date ?? Date()) {
+                    return ($0.date?.date ?? Date()) > ($1.date?.date ?? Date())
+                }
+                return $0.position < $1.position
+            }
+        } else {
+            // For non-routine views, return all tasks as-is
+            return Array(tasks)
+        }
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             // Title positioned exactly like "Coming Soon"
@@ -268,7 +299,7 @@ struct DataTaskListView: View {
                 .foregroundColor(.secondary)
             
             List {
-                ForEach(Array(zip(tasks.indices, tasks)), id: \.0) { index, task in
+                ForEach(Array(zip(uniqueTasks.indices, uniqueTasks)), id: \.0) { index, task in
                     NavigationLink(destination: DataTaskDetailView(task: task)) {
                         HStack {
                             Text(task.title ?? "Untitled Task")

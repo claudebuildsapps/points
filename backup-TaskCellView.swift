@@ -20,15 +20,8 @@ struct TaskCellView: View {
     var onIncrement: () -> Void
 
     var body: some View {
-        Button(action: {
-            // Only increment if not currently swiping
-            if !isSwipeInProgress {
-                let previousCompleted = Int(task.completed)
-                onIncrement()
-                animateCompletionChange(from: previousCompleted)
-            }
-        }) {
-            ZStack {
+        // Use a ZStack with a gesture instead of a Button to prevent gesture conflicts
+        ZStack {
                 // Background with completion state color
                 backgroundColor()
                     .animation(.easeInOut(duration: Constants.Animation.standard), value: task.completed)
@@ -107,7 +100,10 @@ struct TaskCellView: View {
                         .buttonStyle(PlainButtonStyle())
                         .frame(width: 40)
                         .contentShape(Rectangle())
-                        .onTapGesture(perform: toggleEditMode)
+                        // Use highPriorityGesture to ensure button tap works
+                        .highPriorityGesture(
+                            TapGesture().onEnded(toggleEditMode)
+                        )
                         .padding(.trailing, 2) // Small padding between edit button and title
                         .helpMetadata(HelpMetadata(
                             id: "task-edit-button",
@@ -140,7 +136,7 @@ struct TaskCellView: View {
                         description: "The name of the task or routine to complete.",
                         usageHints: [
                             "Tap the entire row to increase completion count",
-                            "Swipe left anywhere on the row to decrease completion count",
+                            "Swipe left on the row to decrease completion count",
                             "Different background shades indicate completion progress",
                             "Colored backgrounds indicate task type (blue for tasks, green for routines, red for critical)"
                         ],
@@ -218,7 +214,7 @@ struct TaskCellView: View {
                         title: "Completion Counter",
                         description: "Shows and controls how many times you've completed this task.",
                         usageHints: [
-                            "Swipe left anywhere on the task row to decrease the count",
+                            "Swipe left on the entire row to decrease the count",
                             "Tap the task row to increase the count",
                             "The slider position represents progress toward target",
                             "The counter turns blue when exceeding your target",
@@ -226,45 +222,23 @@ struct TaskCellView: View {
                         ],
                         importance: .important
                     ))
-                    .gesture(
-                        // Add swipe left gesture for decrement
-                        DragGesture(minimumDistance: 10, coordinateSpace: .local)
-                            .onChanged { _ in 
-                                // Set flag when drag starts
-                                isSwipeInProgress = true
-                            }
-                            .onEnded { value in
-                                // Only handle left swipes
-                                if value.translation.width < -10 && value.translation.height > -30 && value.translation.height < 30 {
-                                    // Check if there are completions to decrement
-                                    if Int(task.completed) > 0 {
-                                        let previousCompleted = Int(task.completed)
-                                        onDecrement()
-                                        animateCompletionChange(from: previousCompleted)
-                                    }
-                                }
-                                // Reset flag after gesture completes
-                                // Adding slight delay to prevent the tap from registering
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    isSwipeInProgress = false
-                                }
-                            }
-                    )
                 }
                 .padding(.vertical, 12)
                 .padding(.horizontal, 8)
             }
         }
-        .buttonStyle(PlainButtonStyle())
-        // Add swipe left gesture to the entire row
-        .gesture(
-            DragGesture()
-                .onChanged { _ in
+        .contentShape(Rectangle()) // Make the entire area tappable
+        // Use simultaneousGesture with higher priority for swipe and lower for tap
+        .simultaneousGesture(
+            // High priority swipe gesture for decrementing
+            DragGesture(minimumDistance: 15, coordinateSpace: .local)
+                .onChanged { _ in 
+                    // Set flag when drag starts to prevent tap action
                     isSwipeInProgress = true
                 }
                 .onEnded { value in
-                    // Only handle left swipes
-                    if value.translation.width < -20 {
+                    // Only handle left swipes with reasonable vertical constraint
+                    if value.translation.width < -15 && value.translation.height > -40 && value.translation.height < 40 {
                         // Check if there are completions to decrement
                         if Int(task.completed) > 0 {
                             let previousCompleted = Int(task.completed)
@@ -274,11 +248,19 @@ struct TaskCellView: View {
                     }
                     
                     // Reset flag after slight delay to prevent accidental tap
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                         isSwipeInProgress = false
                     }
                 }
         )
+        // Add tap gesture with lower priority
+        .onTapGesture {
+            if !isSwipeInProgress {
+                let previousCompleted = Int(task.completed)
+                onIncrement()
+                animateCompletionChange(from: previousCompleted)
+            }
+        }
         
         // Present edit sheet when edit mode is active
         .sheet(isPresented: $isExpanded, onDismiss: {
