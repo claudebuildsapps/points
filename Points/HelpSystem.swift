@@ -238,7 +238,6 @@ struct HelpOverlayModifier: ViewModifier {
                             }
                             // Skip highlight for UI elements that handle their own highlighting
                             else if metadata.id == "quick-create-task-button" || 
-                                   metadata.id == "create-routine-button" || 
                                    metadata.id == "help-button" || 
                                    metadata.id == "home-button" || 
                                    metadata.id == "delete-button" || 
@@ -454,8 +453,8 @@ struct HelpModeOverlay: View {
                     }
                 }
                 .padding(.horizontal, 12)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
+                .padding(.top, 4) // Reduced top padding to move upward
+                .padding(.bottom, 2) // Reduced bottom padding as well
                 
                 // Expanded content when info button is tapped
                 if showingTutorial {

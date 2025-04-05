@@ -1,6 +1,118 @@
 import SwiftUI
 import CoreData
 
+// Reusable numeric editing component
+struct NumericEditingView: View {
+    let title: String
+    let initialValue: String
+    let onSave: (String) -> Void
+    
+    @Environment(\.presentationMode) private var presentationMode
+    @State private var editableValue: String = ""
+    @State private var isFirstDigit: Bool = true
+    
+    var body: some View {
+        VStack {
+            Text(title)
+                .font(.headline)
+                .padding()
+            
+            // Show current value
+            Text(editableValue.isEmpty ? initialValue : editableValue)
+                .font(.system(size: 36, weight: .bold))
+                .padding()
+            
+            // Custom numeric keypad
+            VStack(spacing: 10) {
+                // Number rows
+                ForEach(0..<3) { row in
+                    HStack(spacing: 20) {
+                        ForEach(1...3, id: \.self) { col in
+                            let number = row * 3 + col
+                            Button(action: {
+                                if isFirstDigit {
+                                    // IMPORTANT: First digit completely replaces current value
+                                    editableValue = "\(number)"
+                                    isFirstDigit = false
+                                } else {
+                                    // Append subsequent digits
+                                    editableValue += "\(number)"
+                                }
+                            }) {
+                                Text("\(number)")
+                                    .font(.system(size: 24, weight: .medium))
+                                    .frame(width: 60, height: 60)
+                                    .background(Color.gray.opacity(0.2))
+                                    .cornerRadius(30)
+                            }
+                        }
+                    }
+                }
+                
+                // Last row with 0, clear, done
+                HStack(spacing: 20) {
+                    // Clear button
+                    Button(action: {
+                        editableValue = ""
+                        isFirstDigit = true // Reset first digit flag when clearing
+                    }) {
+                        Image(systemName: "delete.left")
+                            .font(.system(size: 24))
+                            .frame(width: 60, height: 60)
+                            .background(Color.red.opacity(0.2))
+                            .cornerRadius(30)
+                    }
+                    
+                    // 0 button
+                    Button(action: {
+                        if isFirstDigit {
+                            // IMPORTANT: First digit completely replaces current value
+                            editableValue = "0"
+                            isFirstDigit = false
+                        } else {
+                            // Append subsequent digits
+                            editableValue += "0"
+                        }
+                    }) {
+                        Text("0")
+                            .font(.system(size: 24, weight: .medium))
+                            .frame(width: 60, height: 60)
+                            .background(Color.gray.opacity(0.2))
+                            .cornerRadius(30)
+                    }
+                    
+                    // Done button
+                    Button(action: {
+                        // Only save if we have a value
+                        if !editableValue.isEmpty {
+                            onSave(editableValue)
+                        }
+                        presentationMode.wrappedValue.dismiss()
+                    }) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 24))
+                            .frame(width: 60, height: 60)
+                            .background(Color.green.opacity(0.2))
+                            .cornerRadius(30)
+                    }
+                }
+            }
+            .padding()
+            
+            Spacer()
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+        .onAppear {
+            // IMPORTANT: Always reinitialize these values when the view appears
+            // This ensures consistent behavior regardless of how many times the view is used
+            editableValue = ""
+            isFirstDigit = true
+        }
+        .id(title) // Add a unique ID based on the title to ensure fresh state
+    }
+}
+
 struct TaskCellView: View {
     @Environment(\.managedObjectContext) private var context
     @Environment(\.theme) private var theme
@@ -11,8 +123,7 @@ struct TaskCellView: View {
     @State private var isSwipeInProgress = false
     @State private var swipeOffset: CGFloat = 0
     @State private var isPointsEditMode = false
-    @State private var editablePoints = ""
-    @State private var isFirstDigit = true // Track if this is the first digit entered
+    @State private var isTargetEditMode = false
     
     // Dark green color for target completion
     private let darkGreenColor = Color(red: 0.2, green: 0.6, blue: 0.4)
@@ -30,17 +141,8 @@ struct TaskCellView: View {
         Button(action: {
             // Only process tap if not currently swiping
             if !isSwipeInProgress {
-                let previousCompleted = Int(task.completed)
-                
-                // If target and max are both 1, and task is completed, toggle back to 0
-                if Int(task.target) == 1 && Int(task.max) == 1 && Int(task.completed) == 1 {
-                    onDecrement() // Reset to 0
-                } else {
-                    // Otherwise increment as usual
-                    onIncrement()
-                }
-                
-                animateCompletionChange(from: previousCompleted)
+                // Tap now triggers edit mode instead of completion
+                toggleEditMode()
             }
         }) {
             ZStack {
@@ -114,12 +216,13 @@ struct TaskCellView: View {
                         }
                         .frame(width: 45)
                         .contentShape(Rectangle()) // Make the entire area tappable
-                        .onTapGesture {
-                            // Initialize the editable points with current value
-                            editablePoints = "\(Int(task.points?.doubleValue ?? 0))"
-                            isFirstDigit = true // Reset the first digit flag
-                            isPointsEditMode = true
-                        }
+                        .highPriorityGesture(
+                            TapGesture()
+                                .onEnded { _ in
+                                    // Initialize the editable points with current value
+                                    isPointsEditMode = true
+                                }
+                        )
                         .helpMetadata(HelpMetadata(
                             id: "task-points-badge",
                             title: "Task Point Value",
@@ -133,31 +236,7 @@ struct TaskCellView: View {
                             importance: .important
                         ))
                         
-                        // Edit button - color based on whether it's a routine or task
-                        Button(action: toggleEditMode) {
-                            Image(systemName: "pencil")
-                                .themeCircleButton(
-                                    color: task.getCritical() ? theme.criticalColor : (task.routine ? theme.routinesTab : theme.tasksTab),
-                                    textColor: theme.textInverted
-                                )
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                        .frame(width: 40)
-                        .contentShape(Rectangle())
-                        .onTapGesture(perform: toggleEditMode)
-                        .padding(.trailing, 2) // Small padding between edit button and title
-                        .helpMetadata(HelpMetadata(
-                            id: "task-edit-button",
-                            title: "Edit Task Button",
-                            description: "Opens the task editor to modify this task's properties.",
-                            usageHints: [
-                                "Edit task title, points, target, and other properties",
-                                "Delete or duplicate the task",
-                                "Convert tasks to templates for reuse",
-                                "Change task type (routine/task/critical)"
-                            ],
-                            importance: .important
-                        ))
+                        // Edit button removed - functionality moved to row tap action
                     }
 
                     // Task title - reduced font size and allowed two lines
@@ -177,7 +256,7 @@ struct TaskCellView: View {
                         title: "Task Title",
                         description: "The name of the task or routine to complete.",
                         usageHints: [
-                            "Tap the entire row to increase completion count",
+                            "Tap the row to edit this task",
                             "Swipe left anywhere on the row to decrease completion count",
                             "Different background shades indicate completion progress",
                             "Colored backgrounds indicate task type (blue for tasks, green for routines, red for critical)"
@@ -248,8 +327,8 @@ struct TaskCellView: View {
                                 .shadow(color: Color.black.opacity(0.3), radius: 2, x: 0, y: 1)
                             
                             // Completion count with consistent font size
-                            Text("\(Int(task.completed))")
-                                .font(.system(size: 14, weight: .bold)) // Reduced from 16 to 14
+                            Text("\(Int(task.completed))/\(Int(task.target))")
+                                .font(.system(size: 12, weight: .bold)) // Reduced further for both numbers
                                 .foregroundColor(.white)
                         }
                         .offset(x: circleOffset)
@@ -257,14 +336,30 @@ struct TaskCellView: View {
                     }
                     .frame(width: 80, height: 32) // Maintain increased overall size
                     .contentShape(Rectangle()) // Make entire area tappable
+                    .highPriorityGesture(
+                        TapGesture()
+                            .onEnded { _ in
+                                // Add tap to increment completion
+                                let previousCompleted = Int(task.completed)
+                                onIncrement()
+                                animateCompletionChange(from: previousCompleted)
+                            }
+                    )
+                    .simultaneousGesture(
+                        LongPressGesture(minimumDuration: 0.5)
+                            .onEnded { _ in
+                                // Initialize the editable target with current value
+                                isTargetEditMode = true
+                            }
+                    )
                     .helpMetadata(HelpMetadata(
                         id: "completion-slider",
                         title: "Completion Counter",
                         description: "Shows and controls how many times you've completed this task.",
                         usageHints: [
+                            "Tap to increase completion count",
                             "Swipe left anywhere on the task row to decrease the count",
-                            "Tap the task row to increase the count",
-                            "For single-completion tasks (target/max=1), tap again to toggle off",
+                            "Long press to edit target value",
                             "The slider position represents progress toward target",
                             "The counter turns green when reaching your target",
                             "The counter turns blue when exceeding your target",
@@ -348,96 +443,58 @@ struct TaskCellView: View {
             )
             .padding(.top, 20)
         }
-        // Sheet for quick points editing
+        // Sheet for quick points or target editing
         .sheet(isPresented: $isPointsEditMode) {
-            // Simple numeric keypad for points editing
-            VStack {
-                Text("Edit Points")
-                    .font(.headline)
-                    .padding()
-                
-                // Always show current value - use placeholder if empty
-                Text(editablePoints.isEmpty ? "\(Int(task.points?.doubleValue ?? 0))" : editablePoints)
-                    .font(.system(size: 36, weight: .bold))
-                    .padding()
-                
-                // Custom numeric keypad
-                VStack(spacing: 10) {
-                    // Number rows
-                    ForEach(0..<3) { row in
-                        HStack(spacing: 20) {
-                            ForEach(1...3, id: \.self) { col in
-                                let number = row * 3 + col
-                                Button(action: {
-                                    if isFirstDigit {
-                                        // Replace value with first digit
-                                        editablePoints = "\(number)"
-                                        isFirstDigit = false
-                                    } else {
-                                        // Append subsequent digits
-                                        editablePoints += "\(number)"
-                                    }
-                                }) {
-                                    Text("\(number)")
-                                        .font(.system(size: 24, weight: .medium))
-                                        .frame(width: 60, height: 60)
-                                        .background(Color.gray.opacity(0.2))
-                                        .cornerRadius(30)
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Last row with 0, clear, done
-                    HStack(spacing: 20) {
-                        // Clear button
-                        Button(action: {
-                            editablePoints = ""
-                            isFirstDigit = true // Reset first digit flag when clearing
-                        }) {
-                            Image(systemName: "delete.left")
-                                .font(.system(size: 24))
-                                .frame(width: 60, height: 60)
-                                .background(Color.red.opacity(0.2))
-                                .cornerRadius(30)
+            NumericEditingView(
+                title: "Edit Points",
+                initialValue: "\(Int(task.points?.doubleValue ?? 0))",
+                onSave: { value in
+                    if let newPointsValue = Int(value), newPointsValue > 0 {
+                        let updatedValues: [String: Any] = [
+                            "points": NSDecimalNumber(value: newPointsValue)
+                        ]
+                        onSaveEdit(updatedValues)
+                        
+                        // Flash background to indicate update
+                        withAnimation(.easeInOut(duration: Constants.Animation.flash)) {
+                            flashBackground = true
                         }
                         
-                        // 0 button
-                        Button(action: {
-                            if isFirstDigit {
-                                // Replace value with zero
-                                editablePoints = "0"
-                                isFirstDigit = false
-                            } else {
-                                // Append zero to existing number
-                                editablePoints += "0"
+                        DispatchQueue.main.asyncAfter(deadline: .now() + Constants.Animation.flash) {
+                            withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
+                                self.flashBackground = false
                             }
-                        }) {
-                            Text("0")
-                                .font(.system(size: 24, weight: .medium))
-                                .frame(width: 60, height: 60)
-                                .background(Color.gray.opacity(0.2))
-                                .cornerRadius(30)
-                        }
-                        
-                        // Done button
-                        Button(action: {
-                            savePointsValue()
-                        }) {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 24))
-                                .frame(width: 60, height: 60)
-                                .background(Color.green.opacity(0.2))
-                                .cornerRadius(30)
                         }
                     }
                 }
-                .padding()
-                
-                Spacer()
-            }
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
+            )
+        }
+        
+        // Sheet for quick target editing - uses same component
+        .sheet(isPresented: $isTargetEditMode) {
+            NumericEditingView(
+                title: "Edit Target",
+                initialValue: "\(Int(task.target))",
+                onSave: { value in
+                    if let newTargetValue = Int(value), newTargetValue > 0 {
+                        let updatedValues: [String: Any] = [
+                            "target": NSNumber(value: newTargetValue)
+                        ]
+                        onSaveEdit(updatedValues)
+                        
+                        // Flash background to indicate update
+                        withAnimation(.easeInOut(duration: Constants.Animation.flash)) {
+                            flashBackground = true
+                        }
+                        
+                        DispatchQueue.main.asyncAfter(deadline: .now() + Constants.Animation.flash) {
+                            withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
+                                self.flashBackground = false
+                            }
+                        }
+                    }
+                }
+            )
         }
         .standardAnimation()
     }
@@ -450,36 +507,6 @@ struct TaskCellView: View {
         }
         if !isEditMode {
             onCancelEdit()
-        }
-    }
-    
-    // Save the points value and update the task
-    private func savePointsValue() {
-        if let newPointsValue = Int(editablePoints), newPointsValue > 0 {
-            // Create updated values dictionary with just the points value
-            let updatedValues: [String: Any] = [
-                "points": NSDecimalNumber(value: newPointsValue)
-            ]
-            
-            // Use the existing onSaveEdit closure to update the task
-            onSaveEdit(updatedValues)
-            
-            // Close the edit sheet
-            isPointsEditMode = false
-            
-            // Flash background to indicate update
-            withAnimation(.easeInOut(duration: Constants.Animation.flash)) {
-                flashBackground = true
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + Constants.Animation.flash) {
-                withAnimation(.easeInOut(duration: Constants.Animation.standard)) {
-                    self.flashBackground = false
-                }
-            }
-        } else {
-            // If invalid value, just dismiss without saving
-            isPointsEditMode = false
         }
     }
     

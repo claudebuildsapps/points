@@ -710,9 +710,7 @@ struct TaskNavigationView: View {
                 .id(forceProgressBarUpdate) // Force view to recreate when points update
                     .padding(.top, 10) // Drop the entire progress bar down by 10px
                 
-                // Add the CreateTabsView below the progress bar with minimal spacing
-                CreateTabsView()
-                    .environment(\.managedObjectContext, context)
+                // CreateTabsView has been removed
                 
                 // Task list with minimal spacing
                 if let dateEntity = currentDateEntity {
