@@ -44,7 +44,7 @@
 - Do not make any attempts to create files that already exist in the codebase
 - If you have questions where you are not sure about the implementation, ask before making any changes
 - If you notice a way that we can reduce the amount of token exchange (e.g. by refactoring in an intelligent way), please point them out
-- Do not examine files larger than 500kb to save compute resources (especially asset files)
+- Do not examine files larger than 500kb to save compute resources, particularly the AppIcon.appiconset
 - Primarily work within the /Points directory as the main source folder
 - Skip parsing the Assets.xcassets contents unless specifically needed for a UI change
 - Only commit changes when explicitly asked with the word "commit"

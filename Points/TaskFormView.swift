@@ -114,7 +114,7 @@ struct TaskFormView: View {
                     .font(.system(size: 20, weight: .bold))
                 
                 Spacer()
-                
+                    
                 // Buttons container for alignment
                 HStack(spacing: 12) {
                     // Copy to Template button - only show in edit mode for non-template tasks

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CustomNumericKeyboard: View {
     @Binding var text: String
+    var displayValue: String? = nil // Optional display value for showing original text
     var isDecimal: Bool
     var colorScheme: ColorScheme
     var screenWidth: CGFloat
@@ -23,51 +24,52 @@ struct CustomNumericKeyboard: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Top bar with value display only (no clear button)
+            // Simple one-line display just showing the current/edited value
             HStack {
                 Spacer()
-                // Display empty state differently (Show placeholder text)
-                if text.isEmpty {
-                    Text("Enter value")
-                        .font(.system(size: 26, weight: .semibold))
-                        .foregroundColor(.gray)
-                        .padding()
-                        .frame(alignment: .trailing)
-                } else {
-                    // Value display - format as integer even for decimal fields
-                    Text(formatDisplayValue(text))
-                        .font(.system(size: 26, weight: .semibold))
-                        .padding()
-                        .frame(alignment: .trailing)
-                }
+                
+                // Always display the initial value (never show 0)
+                let textToDisplay = displayValue != nil ? displayValue! : text
+                Text(formatDisplayValue(textToDisplay))
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(.primary) // Revert to original text color
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            .frame(height: 60)
-            .background(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray5))
+            .frame(height: 46) 
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray5)) // Restore original background color
+                    .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+            )
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2) // Reduced vertical padding
             
             // Keyboard buttons - edge to edge with full width
-            VStack(spacing: 6) {
+            VStack(spacing: 3) {  // Further reduced spacing for more compact look
                 ForEach(keyboardRows, id: \.self) { row in
-                    HStack(spacing: 6) {
+                    HStack(spacing: 3) {  // Further reduced spacing for more compact look
                         ForEach(row, id: \.self) { key in
                             Button(action: {
                                 handleKeyPress(key)
                             }) {
                                 if key == "⌫" {
                                     Image(systemName: "delete.left")
-                                        .font(.system(size: 24))
+                                        .font(.system(size: 22))
                                         .foregroundColor(.red)
                                         .frame(maxWidth: .infinity)
-                                        .frame(height: 60)
+                                        .frame(height: 50)  // Further reduced height
                                         .background(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4))
-                                        .cornerRadius(8)
+                                        .cornerRadius(6)
                                 } else {
                                     Text(key)
-                                        .font(.system(size: 30, weight: .medium))
+                                        .font(.system(size: 26, weight: .medium))  // Further reduced font size
                                         .frame(maxWidth: .infinity)
-                                        .frame(height: 60)
+                                        .frame(height: 50)  // Further reduced height to match delete button
                                         .background(colorScheme == .dark ? Color(.systemGray5) : Color(.systemGray4))
                                         .foregroundColor(.primary)
-                                        .cornerRadius(8)
+                                        .cornerRadius(6)
                                 }
                             }
                             .disabled(key == "." && (!isDecimal || text.contains(".")))
@@ -75,8 +77,8 @@ struct CustomNumericKeyboard: View {
                     }
                 }
                 
-                // Function row with Cancel/Done buttons with more spacing
-                HStack(spacing: 12) { // Increased spacing between buttons
+                // Function row with Cancel/Done buttons with more compact layout
+                HStack(spacing: 6) { // Further reduced spacing between buttons
                     // Cancel or Clear button
                     if showCancelButton && onCancel != nil {
                         // Cancel button that discards changes with help integration
@@ -90,12 +92,12 @@ struct CustomNumericKeyboard: View {
                                 }
                             }) {
                                 Text("Cancel")
-                                    .font(.system(size: 20))
+                                    .font(.system(size: 18))
                                     .foregroundColor(.red)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 60)
+                                    .frame(height: 50)
                                     .background(Color.red.opacity(0.1))
-                                    .cornerRadius(8)
+                                    .cornerRadius(6)
                             }
                             .disabled(HelpSystem.shared.isHelpModeActive)
                             
@@ -153,12 +155,12 @@ struct CustomNumericKeyboard: View {
                                 }
                             }) {
                                 Text("Clear")
-                                    .font(.system(size: 20))
+                                    .font(.system(size: 18))
                                     .foregroundColor(.red)
                                     .frame(maxWidth: .infinity)
-                                    .frame(height: 60)
+                                    .frame(height: 50)
                                     .background(Color.red.opacity(0.1))
-                                    .cornerRadius(8)
+                                    .cornerRadius(6)
                             }
                             .disabled(HelpSystem.shared.isHelpModeActive)
                             
@@ -217,12 +219,12 @@ struct CustomNumericKeyboard: View {
                             }
                         }) {
                             Text("Done")
-                                .font(.system(size: 20, weight: .semibold))
+                                .font(.system(size: 18, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 60)
+                                .frame(height: 50)
                                 .background(Color.blue)
-                                .cornerRadius(8)
+                                .cornerRadius(6)
                         }
                         .disabled(HelpSystem.shared.isHelpModeActive)
                         
@@ -272,7 +274,7 @@ struct CustomNumericKeyboard: View {
                     .padding(.trailing, 8) // Add padding to push away from edge
                 }
             }
-            .padding(5)
+            .padding(4)
             .background(colorScheme == .dark ? Color.black : Color(.systemGray6))
         }
     }
@@ -304,16 +306,28 @@ struct CustomNumericKeyboard: View {
         }
     }
     
-    // Helper to format display value - show as integer even if decimal
+    // Helper to format display value with appropriate formatting
     private func formatDisplayValue(_ value: String) -> String {
         if value.isEmpty {
             return "0"
         }
         
-        // For decimal values, try to convert to integer for display
+        // For decimal values with .0 ending, show as integer
         if isDecimal && value.contains(".") {
             if let doubleValue = Double(value) {
-                return "\(Int(doubleValue))"
+                // If it's a whole number (no fractional part), show as integer
+                if doubleValue == Double(Int(doubleValue)) {
+                    return "\(Int(doubleValue))"
+                }
+                
+                // For other decimal values, ensure we show at most 1 decimal place
+                let numberFormatter = NumberFormatter()
+                numberFormatter.minimumFractionDigits = 0 // Don't show .0
+                numberFormatter.maximumFractionDigits = 1 // Show at most one decimal place
+                
+                if let formattedString = numberFormatter.string(from: NSNumber(value: doubleValue)) {
+                    return formattedString
+                }
             }
         }
         

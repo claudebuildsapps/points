@@ -1,54 +1,42 @@
 import SwiftUI
 import CoreData
 
-// Reusable numeric editing component that uses CustomNumericKeyboard
+// Simple wrapper that uses the standard KeyboardView for editing numeric values
 struct NumericEditingView: View {
     let title: String
     let initialValue: String
     let onSave: (String) -> Void
     
     @Environment(\.presentationMode) private var presentationMode
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var editableValue: String = ""
+    @State private var editableValue: String
+    
+    init(title: String, initialValue: String, onSave: @escaping (String) -> Void) {
+        self.title = title
+        self.initialValue = initialValue
+        self.onSave = onSave
+        // Initialize with the current value to always show the correct value
+        self._editableValue = State(initialValue: initialValue)
+    }
     
     var body: some View {
-        VStack {
-            Text(title)
-                .font(.headline)
-                .padding()
-            
-            // Show current value
-            Text(editableValue.isEmpty ? initialValue : editableValue)
-                .font(.system(size: 36, weight: .bold))
-                .padding()
-            
-            // Use the standardized CustomNumericKeyboard component
-            CustomNumericKeyboard(
-                text: $editableValue,
-                isDecimal: false, // Only allow integers for these quick edits
-                colorScheme: colorScheme,
-                screenWidth: UIScreen.main.bounds.width,
-                showCancelButton: true,
-                onDone: {
-                    // Only save if we have a value
-                    if !editableValue.isEmpty {
-                        onSave(editableValue)
-                    }
-                    presentationMode.wrappedValue.dismiss()
-                },
-                onCancel: {
-                    presentationMode.wrappedValue.dismiss()
+        // Just the KeyboardView with no other elements
+        KeyboardView(
+            text: $editableValue,
+            isDecimal: false, // Only allow integers for these quick edits
+            showCancelButton: true,
+            onDismiss: {
+                // Only save if we have a value
+                if !editableValue.isEmpty {
+                    onSave(editableValue)
                 }
-            )
-            
-            Spacer()
-        }
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
-        .onAppear {
-            // Reset to empty value when the view appears
-            editableValue = ""
-        }
+                presentationMode.wrappedValue.dismiss()
+            },
+            onCancel: {
+                presentationMode.wrappedValue.dismiss()
+            }
+        )
+        .presentationDetents([.height(320)]) // Further reduced height with no title
+        .presentationDragIndicator(.hidden) // Remove the gray line completely
         .id(title) // Add a unique ID based on the title to ensure fresh state
     }
 }
@@ -121,14 +109,22 @@ struct TaskCellView: View {
                         // Eye-catching points indicator with badge-like design
                         VStack(spacing: -2) {
                             ZStack {
-                                // Points background - dark colored background
+                                // Points background - becomes lighter during editing
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(task.getCritical() ? theme.criticalColor : (task.routine ? theme.routinesTab : theme.tasksTab)) // Full color background with critical priority
+                                    .fill(task.getCritical() 
+                                          ? theme.criticalColor.opacity(isPointsEditMode ? 0.3 : 1.0) 
+                                          : (task.routine 
+                                             ? theme.routinesTab.opacity(isPointsEditMode ? 0.3 : 1.0) 
+                                             : theme.tasksTab.opacity(isPointsEditMode ? 0.3 : 1.0))) // Reduced opacity when editing
                                     .frame(width: 45, height: 40)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
                                             .stroke(
-                                                task.getCritical() ? theme.criticalColor : (task.routine ? theme.routinesTab : theme.tasksTab),
+                                                task.getCritical() 
+                                                ? theme.criticalColor.opacity(isPointsEditMode ? 0.3 : 1.0) 
+                                                : (task.routine 
+                                                   ? theme.routinesTab.opacity(isPointsEditMode ? 0.3 : 1.0) 
+                                                   : theme.tasksTab.opacity(isPointsEditMode ? 0.3 : 1.0)),
                                                 lineWidth: 2
                                             )
                                     )
@@ -383,10 +379,10 @@ struct TaskCellView: View {
             )
             .padding(.top, 20)
         }
-        // Sheet for quick points or target editing
+        // Sheet for quick points editing - no title needed now
         .sheet(isPresented: $isPointsEditMode) {
             NumericEditingView(
-                title: "Edit Points",
+                title: "Points", // Simply "Points" as the context is clear from the UI
                 initialValue: "\(Int(task.points?.doubleValue ?? 0))",
                 onSave: { value in
                     if let newPointsValue = Int(value), newPointsValue > 0 {
@@ -408,12 +404,14 @@ struct TaskCellView: View {
                     }
                 }
             )
+            .presentationDetents([.height(320)]) // Reduced height with no title
+            .presentationDragIndicator(.hidden) // Remove the gray line completely
         }
         
-        // Sheet for quick target editing - uses same component
+        // Sheet for quick target editing - uses same component with consistent styling
         .sheet(isPresented: $isTargetEditMode) {
             NumericEditingView(
-                title: "Edit Target",
+                title: "Target", // Simply "Target" as the context is clear from the UI
                 initialValue: "\(Int(task.target))",
                 onSave: { value in
                     if let newTargetValue = Int(value), newTargetValue > 0 {
@@ -435,6 +433,8 @@ struct TaskCellView: View {
                     }
                 }
             )
+            .presentationDetents([.height(320)]) // Reduced height with no title
+            .presentationDragIndicator(.hidden) // Remove the gray line completely
         }
         .standardAnimation()
     }

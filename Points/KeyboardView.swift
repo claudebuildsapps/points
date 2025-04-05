@@ -57,26 +57,20 @@ struct KeyboardView: View {
                                 showCancelButton: showCancelButton
                             )
                         } else {
-                            VStack {
-                                // Show current value at the top
-                                Text(editingText.isEmpty ? text : editingText)
-                                    .font(.system(size: 36, weight: .bold))
-                                    .padding()
-                                
-                                // Use numeric keyboard for numbers
-                                CustomNumericKeyboard(
-                                    text: $editingText,
-                                    isDecimal: isDecimal,
-                                    colorScheme: colorScheme,
-                                    screenWidth: geometry.size.width,
-                                    showCancelButton: showCancelButton,
-                                    onDone: {
-                                        saveChanges()
-                                        dismissWithAnimation()
-                                    },
-                                    onCancel: onCancel
-                                )
-                            }
+                            // Use the improved numeric keyboard with one-line compact display
+                            CustomNumericKeyboard(
+                                text: $editingText,
+                                displayValue: editingText.isEmpty ? text : editingText, // Pass the original value for display
+                                isDecimal: isDecimal,
+                                colorScheme: colorScheme,
+                                screenWidth: geometry.size.width,
+                                showCancelButton: showCancelButton,
+                                onDone: {
+                                    saveChanges()
+                                    dismissWithAnimation()
+                                },
+                                onCancel: onCancel
+                            )
                         }
                     }
                     .background(
