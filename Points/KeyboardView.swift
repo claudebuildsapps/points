@@ -20,8 +20,9 @@ struct KeyboardView: View {
         self.showCancelButton = showCancelButton
         self.onDismiss = onDismiss
         self.onCancel = onCancel
-        self._editingText = State(initialValue: text.wrappedValue)
-        self._cursorPosition = State(initialValue: text.wrappedValue.count) // Position at end
+        // Initialize with empty text so the first keypress replaces the value instead of appending to it
+        self._editingText = State(initialValue: "")
+        self._cursorPosition = State(initialValue: 0) // Position at beginning for a clean start
     }
     
     var body: some View {
@@ -56,9 +57,10 @@ struct KeyboardView: View {
                                 showCancelButton: showCancelButton
                             )
                         } else {
-                            // Use numeric keyboard for numbers
+                            // Use the improved numeric keyboard with one-line compact display
                             CustomNumericKeyboard(
                                 text: $editingText,
+                                displayValue: editingText.isEmpty ? text : editingText, // Pass the original value for display
                                 isDecimal: isDecimal,
                                 colorScheme: colorScheme,
                                 screenWidth: geometry.size.width,
@@ -93,7 +95,15 @@ struct KeyboardView: View {
     
     // Save changes back to original binding
     private func saveChanges() {
-        text = editingText
+        // Only update if user entered something
+        if !editingText.isEmpty {
+            text = editingText
+        }
+    }
+    
+    // Helper to get display text (shows original value when editing text is empty)
+    private func displayText() -> String {
+        return editingText.isEmpty ? text : editingText
     }
     
     private func isTextInputField() -> Bool {

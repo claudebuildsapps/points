@@ -140,12 +140,15 @@ struct ProgressBarView: View {
             // Background component
             progressBarBackground(geometry: geometry)
             
-            // Gold progress section component
-            progressBarGoldSection(geometry: geometry, actualProgressWidth: actualProgressWidth, targetPosition: targetPosition)
+            // Gold progress section component - use progress or at least 5px to ensure we have something to tap
+            progressBarGoldSection(geometry: geometry, actualProgressWidth: max(actualProgressWidth, 5), targetPosition: targetPosition)
             
             // Blue section (beyond target) if needed
             if animatedPointsValue > Double(dailyTarget) {
                 progressBarBeyondTarget(geometry: geometry, targetPosition: targetPosition)
+            } else {
+                // Area beyond target that can be tapped for help when below target
+                beyondTargetHelpArea(geometry: geometry, targetPosition: targetPosition)
             }
             
             // Target marker/indicator component
@@ -223,67 +226,62 @@ struct ProgressBarView: View {
                 let remainingWidth = max(0, targetPosition - actualProgressWidth)
                 let remainingX = actualProgressWidth + (remainingWidth / 2)
                 
-                ZStack {
-                    // No visible element, just used for hit testing
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(width: remainingWidth, height: geometry.size.height)
-                        
-                    // Custom help highlight - only show in help mode when highlighted
-                    if helpSystem.isHelpModeActive && helpSystem.isElementHighlighted("progress-remaining") {
-                        Rectangle()
-                            .stroke(Color.blue, lineWidth: 2)
-                            .cornerRadius(2)
-                            .frame(width: remainingWidth, height: geometry.size.height)
-                    }
-                }
-                .position(x: remainingX, y: geometry.size.height / 2)
-                .contentShape(Rectangle())
-                // Replacement help button when in help mode
-                .overlay(
-                    Group {
+                // Create a precise tap target for the remaining section
+                Rectangle()
+                    .fill(helpSystem.isHelpModeActive ? Color.blue.opacity(0.02) : Color.clear) // Very subtle visual in help mode
+                    .frame(width: remainingWidth, height: geometry.size.height)
+                    .position(x: remainingX, y: geometry.size.height / 2)
+                    // Add direct tap detection
+                    .contentShape(Rectangle())
+                    .onTapGesture {
                         if helpSystem.isHelpModeActive {
-                            // Invisible button to trigger highlighting
-                            Button(action: {
-                                helpSystem.highlightElement("progress-remaining")
-                            }) {
-                                Rectangle()
-                                    .fill(Color.clear)
-                                    .frame(width: remainingWidth, height: geometry.size.height)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                            .position(x: remainingWidth/2, y: geometry.size.height/2)
+                            print("📊 Tapped remaining progress area")
+                            helpSystem.highlightElement("progress-remaining")
                         }
                     }
-                )
-                // Register with help system for metadata only, not for highlighting
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        HelpSystem.shared.registerElement(
-                            id: "progress-remaining",
-                            metadata: HelpMetadata(
+                    // Ensure this has a high z-index to capture taps
+                    .zIndex(40)
+                    // Add highlight outline directly
+                    .overlay(
+                        Group {
+                            if helpSystem.isHelpModeActive && helpSystem.isElementHighlighted("progress-remaining") {
+                                // Highlight with exact dimensions
+                                Rectangle()
+                                    .stroke(Color.blue, lineWidth: 2)
+                                    .frame(width: remainingWidth, height: geometry.size.height)
+                                    .position(x: remainingWidth/2, y: geometry.size.height/2)
+                            }
+                        }
+                    )
+                    // Register with help system
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            HelpSystem.shared.registerElement(
                                 id: "progress-remaining",
-                                title: "Remaining Progress",
-                                description: "This area shows how much more you need to reach your target.",
-                                usageHints: [
-                                    "Gray area represents points still needed",
-                                    "Will be filled with gold as you earn more points",
-                                    "Complete tasks to fill this area and reach your target"
-                                ],
-                                importance: .important
-                            ),
-                            frame: CGRect(x: actualProgressWidth, y: 0, width: remainingWidth, height: geometry.size.height)
-                        )
+                                metadata: HelpMetadata(
+                                    id: "progress-remaining",
+                                    title: "Remaining Progress",
+                                    description: "This area shows how much more you need to reach your target.",
+                                    usageHints: [
+                                        "Gray area represents points still needed",
+                                        "Will be filled with gold as you earn more points",
+                                        "Complete tasks to fill this area and reach your target"
+                                    ],
+                                    importance: .important
+                                ),
+                                frame: CGRect(x: actualProgressWidth, y: 0, width: remainingWidth, height: geometry.size.height)
+                            )
+                        }
                     }
-                }
             }
         }
     }
     
     // Gold progress section component
     private func progressBarGoldSection(geometry: GeometryProxy, actualProgressWidth: CGFloat, targetPosition: CGFloat) -> some View {
-        ZStack(alignment: .leading) {
+        let width = min(max(5, actualProgressWidth), targetPosition) // Ensure at least 5px to tap
+        
+        return ZStack(alignment: .leading) {
             // Main progress fill
             Rectangle()
                 .fill(
@@ -297,7 +295,7 @@ struct ProgressBarView: View {
                     )
                 )
                 .cornerRadius(2)
-                .frame(width: min(max(0, actualProgressWidth), targetPosition), height: geometry.size.height)
+                .frame(width: width, height: geometry.size.height)
                 .alignmentGuide(.leading) { _ in 0 } // Force alignment to left edge
                 
             // Custom help highlight - only show in help mode when highlighted
@@ -305,29 +303,20 @@ struct ProgressBarView: View {
                 Rectangle()
                     .stroke(Color.blue, lineWidth: 2)
                     .cornerRadius(2)
-                    .frame(width: min(max(0, actualProgressWidth), targetPosition), height: geometry.size.height)
+                    .frame(width: width, height: geometry.size.height)
             }
         }
         .contentShape(Rectangle())
-        // Replacement help button when in help mode
-        .overlay(
-            Group {
-                if helpSystem.isHelpModeActive {
-                    // Invisible button to trigger highlighting
-                    Button(action: {
-                        helpSystem.highlightElement("progress-gold-section")
-                    }) {
-                        Rectangle()
-                            .fill(Color.clear)
-                            .frame(width: min(max(4, actualProgressWidth), targetPosition), height: geometry.size.height)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .disabled(actualProgressWidth < 4) // Disable when progress bar is too small
-                }
+        // If in help mode, capture taps directly (more reliable than overlay button)
+        .onTapGesture {
+            if helpSystem.isHelpModeActive {
+                print("📊 Tapped gold progress section")
+                helpSystem.highlightElement("progress-gold-section")
             }
-        )
-        // Register with help system for metadata only, not for highlighting
+        }
+        // Give this a higher zIndex to ensure it captures taps
+        .zIndex(30)
+        // Register with help system for metadata
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 HelpSystem.shared.registerElement(
@@ -344,8 +333,69 @@ struct ProgressBarView: View {
                         ],
                         importance: .important
                     ),
-                    frame: CGRect(x: 0, y: 0, width: min(max(0, actualProgressWidth), targetPosition), height: geometry.size.height)
+                    frame: CGRect(x: 0, y: 0, width: width, height: geometry.size.height)
                 )
+            }
+        }
+    }
+    
+    // Help area for space beyond target (when not filled)
+    private func beyondTargetHelpArea(geometry: GeometryProxy, targetPosition: CGFloat) -> some View {
+        // Calculate the width of the area beyond target
+        let beyondWidth = geometry.size.width - targetPosition
+        
+        // Create the content regardless of width, but conditionally adjust visibility
+        return ZStack {
+            // Invisible rectangle to capture taps - but with a tiny bit of opacity in help mode for debugging
+            Rectangle()
+                .fill(helpSystem.isHelpModeActive ? Color.blue.opacity(0.05) : Color.clear)
+                .frame(width: max(beyondWidth, 2), height: geometry.size.height) // Ensure minimum size
+                .contentShape(Rectangle())
+            
+            // Custom help highlight - only show in help mode when highlighted
+            if helpSystem.isHelpModeActive && helpSystem.isElementHighlighted("progress-beyond-section") {
+                Rectangle()
+                    .stroke(Color.blue, lineWidth: 2)
+                    .cornerRadius(2)
+                    .frame(width: max(beyondWidth, 2), height: geometry.size.height)
+            }
+        }
+        .position(x: (max(beyondWidth, 2) / 2) + targetPosition, y: geometry.size.height / 2)
+        // Critical - must use contentShape here to ensure taps register
+        .contentShape(Rectangle())
+        // If in help mode, capture taps on this area, but only if we have enough width
+        .onTapGesture {
+            if helpSystem.isHelpModeActive && beyondWidth > 2 {
+                print("📏 Tapped beyond target area")
+                helpSystem.highlightElement("progress-beyond-section")
+            }
+        }
+        // Only register in help system and make clickable if we have enough width
+        .opacity(beyondWidth > 2 ? 1 : 0)
+        .disabled(beyondWidth <= 2)
+        // Give this a high zIndex to ensure it captures taps
+        .zIndex(20)
+        // Register with help system for metadata
+        .onAppear {
+            if beyondWidth > 2 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    HelpSystem.shared.registerElement(
+                        id: "progress-beyond-section",
+                        metadata: HelpMetadata(
+                            id: "progress-beyond-section",
+                            title: "Points Beyond Target",
+                            description: "This area represents potential points beyond your daily target.",
+                            usageHints: [
+                                "Will turn blue when you exceed your target",
+                                "Represents extra achievement beyond your goal",
+                                "Completing more tasks fills this area",
+                                "Encourages exceeding your daily goals"
+                            ],
+                            importance: .important
+                        ),
+                        frame: CGRect(x: targetPosition, y: 0, width: beyondWidth, height: geometry.size.height)
+                    )
+                }
             }
         }
     }
@@ -519,6 +569,9 @@ struct ProgressBarView: View {
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
                         .minimumScaleFactor(0.8)
+                        // Only for zero points, align the text to the right with padding
+                        .frame(width: displayPoints > 0 ? nil : 38, alignment: displayPoints > 0 ? .center : .trailing)
+                        .padding(.trailing, displayPoints > 0 ? 0 : 5)
                         // Important: Do not use any transition or animation on the Text itself
                         .id("staticPointsDisplay")
                 }
@@ -574,7 +627,7 @@ struct ProgressBarView: View {
             }
             .offset(y: -30) // Increased downward offset to match target display and avoid overlap
         }
-        .position(x: displayPoints > 0 ? indicatorPosition : 0, y: geometry.size.height / 2) // Place at far left (0) when points are 0
+        .position(x: displayPoints > 0 ? indicatorPosition : 0, y: geometry.size.height / 2) // Place entire container at far left (0) when points are 0
     }
     
     // Target edit sheet content
