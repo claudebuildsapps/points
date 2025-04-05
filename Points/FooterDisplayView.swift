@@ -188,7 +188,7 @@ struct FooterDisplayView: View {
                 
                 // Theme toggle button
                 tabButton(
-                    icon: colorScheme == .dark ? "sun.max.fill" : "moon.fill", 
+                    icon: colorScheme == .dark ? "sun.max.fill" : "sun.and.horizon.fill", 
                     color: theme.dataTab, 
                     action: onThemeToggle
                 )
@@ -345,7 +345,7 @@ struct FooterDisplayView: View {
             return "help-button"
         case "xmark.bin":
             return "delete-button"
-        case "sun.max.fill", "moon.fill":
+        case "sun.max.fill", "sun.and.horizon.fill":
             return "theme-toggle-button"
         default:
             return "button-\(icon)"
@@ -393,7 +393,7 @@ struct FooterDisplayView: View {
                 ],
                 importance: .critical
             )
-        case "sun.max.fill", "moon.fill":
+        case "sun.max.fill", "sun.and.horizon.fill":
             return HelpMetadata(
                 id: "theme-toggle-button",
                 title: "Theme Toggle Button",

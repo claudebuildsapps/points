@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreData
 
 struct ProgressBarView: View {
     @Binding var progress: Float
@@ -6,7 +7,9 @@ struct ProgressBarView: View {
     @Environment(\.managedObjectContext) private var context
     @State private var dailyTarget: Int = 100 // Default target
     @State private var isEditingTarget: Bool = false // Track if target is being edited
-    @State private var editableTarget: String = "100" // For editing with keyboard
+    
+    // Current date entity for persisting target
+    var dateEntity: CoreDataDate? = nil
     
     // Points value passed from parent
     var actualPoints: Int = 0
@@ -27,9 +30,10 @@ struct ProgressBarView: View {
     // Help system reference
     @ObservedObject private var helpSystem = HelpSystem.shared
     
-    init(progress: Binding<Float> = .constant(0), actualPoints: Int = 0) {
+    init(progress: Binding<Float> = .constant(0), actualPoints: Int = 0, dateEntity: CoreDataDate? = nil) {
         self._progress = progress
         self.actualPoints = actualPoints
+        self.dateEntity = dateEntity
     }
     
     // Split body into smaller pieces to help the compiler
@@ -83,7 +87,28 @@ struct ProgressBarView: View {
             }
         }
         // Present numeric keyboard when editing target
-        .sheet(isPresented: $isEditingTarget) { targetEditingSheet }
+        .sheet(isPresented: $isEditingTarget) {
+            NumericEditingView(
+                title: "Target",
+                initialValue: "\(dailyTarget)",
+                onSave: { value in
+                    if let newTarget = Int(value), newTarget > 0 {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            dailyTarget = newTarget
+                            saveDailyTarget(newTarget)
+                            
+                            // Notify that target has changed
+                            NotificationCenter.default.post(
+                                name: Constants.Notifications.taskListChanged,
+                                object: nil
+                            )
+                        }
+                    }
+                }
+            )
+            .presentationDetents([.height(320)])
+            .presentationDragIndicator(.hidden)
+        }
     }
     
     // Helper to calculate all values needed for progress bar rendering
@@ -140,8 +165,8 @@ struct ProgressBarView: View {
             // Background component
             progressBarBackground(geometry: geometry)
             
-            // Gold progress section component - use progress or at least 5px to ensure we have something to tap
-            progressBarGoldSection(geometry: geometry, actualProgressWidth: max(actualProgressWidth, 5), targetPosition: targetPosition)
+            // Gold progress section component - use progress or exactly 3px for minimum progress
+            progressBarGoldSection(geometry: geometry, actualProgressWidth: displayPoints == 0 ? 3 : max(actualProgressWidth, 3), targetPosition: targetPosition)
             
             // Blue section (beyond target) if needed
             if animatedPointsValue > Double(dailyTarget) {
@@ -279,7 +304,7 @@ struct ProgressBarView: View {
     
     // Gold progress section component
     private func progressBarGoldSection(geometry: GeometryProxy, actualProgressWidth: CGFloat, targetPosition: CGFloat) -> some View {
-        let width = min(max(5, actualProgressWidth), targetPosition) // Ensure at least 5px to tap
+        let width = min(max(3, actualProgressWidth), targetPosition) // Changed from 5px to 3px to match target line width
         
         return ZStack(alignment: .leading) {
             // Main progress fill
@@ -294,7 +319,7 @@ struct ProgressBarView: View {
                         endPoint: .trailing
                     )
                 )
-                .cornerRadius(2)
+                .cornerRadius(actualProgressWidth <= 3 ? 0 : 2) // Only round corners when progress is more than minimum
                 .frame(width: width, height: geometry.size.height)
                 .alignmentGuide(.leading) { _ in 0 } // Force alignment to left edge
                 
@@ -469,15 +494,13 @@ struct ProgressBarView: View {
             // Target decoration
             Rectangle()
                 .fill(darkGreenColor)
-                .frame(width: 3, height: geometry.size.height + 20) // Increased to match larger vertical offset
+                .frame(width: 3, height: geometry.size.height) // Adjusted to exactly touch the bottom of the progress bar
             
             ZStack {
                 // Main content - unaffected by help mode
                 Button(action: {
                     // Only trigger action if not in help mode
                     if !helpSystem.isHelpModeActive {
-                        // Initialize editable target with current value
-                        editableTarget = "\(dailyTarget)"
                         isEditingTarget = true
                     }
                 }) {
@@ -542,7 +565,7 @@ struct ProgressBarView: View {
                         }
                 }
             }
-            .offset(y: -30) // Increased downward offset to avoid overlapping with date row
+            .offset(y: -16) // Adjusted to touch the top of the progress bar
         }
         .position(x: targetPosition, y: geometry.size.height / 2)
     }
@@ -553,7 +576,7 @@ struct ProgressBarView: View {
             // Points decoration line
             Rectangle()
                 .fill(indicatorColor)
-                .frame(width: 3, height: geometry.size.height + 20) // Increased to match larger vertical offset
+                .frame(width: 3, height: geometry.size.height) // Adjusted to exactly touch the bottom of the progress bar
             
             ZStack {
                 // Current points bubble - main content
@@ -625,116 +648,43 @@ struct ProgressBarView: View {
                         }
                 }
             }
-            .offset(y: -30) // Increased downward offset to match target display and avoid overlap
+            .offset(y: -16) // Adjusted to touch the top of the progress bar
         }
         .position(x: displayPoints > 0 ? indicatorPosition : 0, y: geometry.size.height / 2) // Place entire container at far left (0) when points are 0
     }
     
-    // Target edit sheet content
-    private var targetEditingSheet: some View {
-        // Numeric keyboard for editing target
-        VStack {
-            Text("Set Daily Target")
-                .font(.headline)
-                .padding()
-            
-            Text(editableTarget.isEmpty ? "0" : editableTarget)
-                .font(.system(size: 36, weight: .bold))
-                .padding()
-            
-            // Custom numeric keypad
-            VStack(spacing: 10) {
-                // Number rows
-                ForEach(0..<3) { row in
-                    HStack(spacing: 20) {
-                        ForEach(1...3, id: \.self) { col in
-                            let number = row * 3 + col
-                            Button(action: {
-                                // Append digit
-                                editableTarget += "\(number)"
-                            }) {
-                                Text("\(number)")
-                                    .font(.system(size: 24, weight: .medium))
-                                    .frame(width: 60, height: 60)
-                                    .background(Color.gray.opacity(0.2))
-                                    .cornerRadius(30)
-                            }
-                        }
-                    }
-                }
-                
-                // Last row with 0, clear, done
-                HStack(spacing: 20) {
-                    // Clear button
-                    Button(action: {
-                        editableTarget = ""
-                    }) {
-                        Image(systemName: "delete.left")
-                            .font(.system(size: 24))
-                            .frame(width: 60, height: 60)
-                            .background(Color.red.opacity(0.2))
-                            .cornerRadius(30)
-                    }
-                    
-                    // 0 button
-                    Button(action: {
-                        editableTarget += "0"
-                    }) {
-                        Text("0")
-                            .font(.system(size: 24, weight: .medium))
-                            .frame(width: 60, height: 60)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(30)
-                    }
-                    
-                    // Done button
-                    Button(action: {
-                        // Save the target and trigger recalculation of progress bar
-                        if let newTarget = Int(editableTarget), newTarget > 0 {
-                            // Using withAnimation to smoothly update the UI
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                dailyTarget = newTarget
-                                saveDailyTarget(newTarget)
-                                
-                                // Notify that target has changed
-                                NotificationCenter.default.post(
-                                    name: Constants.Notifications.taskListChanged,
-                                    object: nil
-                                )
-                            }
-                        }
-                        isEditingTarget = false
-                    }) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 24))
-                            .frame(width: 60, height: 60)
-                            .background(Color.green.opacity(0.2))
-                            .cornerRadius(30)
-                    }
-                }
-            }
-            .padding()
-            
-            Spacer()
-        }
-        .presentationDetents([.medium])
-        .presentationDragIndicator(.visible)
-    }
+    // We now use NumericEditingView instead of the custom targetEditingSheet implementation
     
     // Load the daily target from CoreData
     private func loadDailyTarget() {
-        // Default to 100 if not set
-        dailyTarget = 100
-        
-        // In a real implementation, you would load this from CoreData
-        // For now, we'll use the default value
+        // Default to 100 if no date entity or target not set
+        if let dateEntity = dateEntity {
+            // Load the target from the date entity
+            dailyTarget = Int(dateEntity.target)
+        } else {
+            // Default to 100 if no date entity available
+            dailyTarget = 100
+        }
     }
     
     // Save the daily target to CoreData
     private func saveDailyTarget(_ target: Int) {
-        // In a real implementation, you would save this to CoreData
-        // For now, we just update the state
+        // Update local state
         dailyTarget = target
+        
+        // Update CoreData if date entity exists
+        if let dateEntity = dateEntity {
+            // Update the target in Core Data
+            dateEntity.target = Int16(target)
+            
+            // Save the context
+            do {
+                try context.save()
+                print("Target saved to CoreData: \(target)")
+            } catch {
+                print("Failed to save target to CoreData: \(error)")
+            }
+        }
     }
     
     // Update progress with optional animation

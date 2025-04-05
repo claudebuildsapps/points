@@ -705,7 +705,8 @@ struct TaskNavigationView: View {
                 // Full-width progress bar with daily target - dropped down by 10px
                 ProgressBarView(
                     progress: $progress,
-                    actualPoints: displayedPoints // Use our animated display points
+                    actualPoints: displayedPoints, // Use our animated display points
+                    dateEntity: currentDateEntity  // Pass the current date entity for target persistence
                 )
                 .id(forceProgressBarUpdate) // Force view to recreate when points update
                     .padding(.top, 10) // Drop the entire progress bar down by 10px

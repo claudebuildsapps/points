@@ -20,7 +20,8 @@ struct DataModelListView: View {
     let models = [
         ModelInfo(displayName: "Dates", entityName: "CoreDataDate", color: Constants.Colors.templateTab),
         ModelInfo(displayName: "Tasks", entityName: "CoreDataTask", color: Constants.Colors.tasksTab, filterType: .tasks),
-        ModelInfo(displayName: "Routines", entityName: "CoreDataTask", color: Constants.Colors.routinesTab, filterType: .routines)
+        ModelInfo(displayName: "Routines", entityName: "CoreDataTask", color: Constants.Colors.routinesTab, filterType: .routines),
+        ModelInfo(displayName: "Templates", entityName: "CoreDataTask", color: Constants.Colors.summaryTab, filterType: .templates)
         // Completions are excluded as they're an intermediate link table
     ]
     
@@ -71,6 +72,8 @@ struct DataModelListView: View {
                 DataTaskListView(filterType: .tasks, title: "Tasks")
             case .routines:
                 DataTaskListView(filterType: .routines, title: "Routines")
+            case .templates:
+                DataTaskListView(filterType: .templates, title: "Templates")
             case .none:
                 DataTaskListView(filterType: .none, title: "All Tasks")
             }
@@ -85,6 +88,7 @@ enum ModelFilterType {
     case none     // No filter applied
     case tasks    // Filter for tasks (routine == false)
     case routines // Filter for routines (routine == true)
+    case templates // Filter for templates (template == true)
 }
 
 // Model information structure
@@ -244,6 +248,8 @@ struct DataTaskListView: View {
             predicate = NSPredicate(format: "routine == %@", NSNumber(value: false))
         case .routines:
             predicate = NSPredicate(format: "routine == %@ AND template == %@", NSNumber(value: true), NSNumber(value: false))
+        case .templates:
+            predicate = NSPredicate(format: "template == %@", NSNumber(value: true))
         case .none:
             predicate = nil
         }

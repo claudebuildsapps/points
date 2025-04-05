@@ -185,7 +185,7 @@ struct TaskCellView: View {
                             .fixedSize(horizontal: false, vertical: true) // Allow text to wrap naturally
                             .padding(.vertical, 2) // Reduced padding to accommodate second line
                     }
-                    .padding(.leading, 5) // Added padding to offset from edit button
+                    .padding(.leading, 30) // Increased padding between points badge and title
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .registerForHelp(
                         id: "task-title",
