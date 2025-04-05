@@ -26,11 +26,20 @@ struct CustomNumericKeyboard: View {
             // Top bar with value display only (no clear button)
             HStack {
                 Spacer()
-                // Value display - format as integer even for decimal fields
-                Text(formatDisplayValue(text))
-                    .font(.system(size: 26, weight: .semibold))
-                    .padding()
-                    .frame(alignment: .trailing)
+                // Display empty state differently (Show placeholder text)
+                if text.isEmpty {
+                    Text("Enter value")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundColor(.gray)
+                        .padding()
+                        .frame(alignment: .trailing)
+                } else {
+                    // Value display - format as integer even for decimal fields
+                    Text(formatDisplayValue(text))
+                        .font(.system(size: 26, weight: .semibold))
+                        .padding()
+                        .frame(alignment: .trailing)
+                }
             }
             .frame(height: 60)
             .background(colorScheme == .dark ? Color(.systemGray6) : Color(.systemGray5))
@@ -284,10 +293,12 @@ struct CustomNumericKeyboard: View {
                 }
             }
         default:
-            // Prevent multiple leading zeros
-            if text == "0" && key != "." {
+            // First keypress should replace the value
+            if text.isEmpty || text == "0" {
+                // Start fresh with the new number
                 text = key
             } else {
+                // After first keypress, append as usual
                 text += key
             }
         }
