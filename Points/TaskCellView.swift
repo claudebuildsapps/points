@@ -1,15 +1,15 @@
 import SwiftUI
 import CoreData
 
-// Reusable numeric editing component
+// Reusable numeric editing component that uses CustomNumericKeyboard
 struct NumericEditingView: View {
     let title: String
     let initialValue: String
     let onSave: (String) -> Void
     
     @Environment(\.presentationMode) private var presentationMode
+    @Environment(\.colorScheme) private var colorScheme
     @State private var editableValue: String = ""
-    @State private var isFirstDigit: Bool = true
     
     var body: some View {
         VStack {
@@ -22,92 +22,32 @@ struct NumericEditingView: View {
                 .font(.system(size: 36, weight: .bold))
                 .padding()
             
-            // Custom numeric keypad
-            VStack(spacing: 10) {
-                // Number rows
-                ForEach(0..<3) { row in
-                    HStack(spacing: 20) {
-                        ForEach(1...3, id: \.self) { col in
-                            let number = row * 3 + col
-                            Button(action: {
-                                if isFirstDigit {
-                                    // IMPORTANT: First digit completely replaces current value
-                                    editableValue = "\(number)"
-                                    isFirstDigit = false
-                                } else {
-                                    // Append subsequent digits
-                                    editableValue += "\(number)"
-                                }
-                            }) {
-                                Text("\(number)")
-                                    .font(.system(size: 24, weight: .medium))
-                                    .frame(width: 60, height: 60)
-                                    .background(Color.gray.opacity(0.2))
-                                    .cornerRadius(30)
-                            }
-                        }
+            // Use the standardized CustomNumericKeyboard component
+            CustomNumericKeyboard(
+                text: $editableValue,
+                isDecimal: false, // Only allow integers for these quick edits
+                colorScheme: colorScheme,
+                screenWidth: UIScreen.main.bounds.width,
+                showCancelButton: true,
+                onDone: {
+                    // Only save if we have a value
+                    if !editableValue.isEmpty {
+                        onSave(editableValue)
                     }
+                    presentationMode.wrappedValue.dismiss()
+                },
+                onCancel: {
+                    presentationMode.wrappedValue.dismiss()
                 }
-                
-                // Last row with 0, clear, done
-                HStack(spacing: 20) {
-                    // Clear button
-                    Button(action: {
-                        editableValue = ""
-                        isFirstDigit = true // Reset first digit flag when clearing
-                    }) {
-                        Image(systemName: "delete.left")
-                            .font(.system(size: 24))
-                            .frame(width: 60, height: 60)
-                            .background(Color.red.opacity(0.2))
-                            .cornerRadius(30)
-                    }
-                    
-                    // 0 button
-                    Button(action: {
-                        if isFirstDigit {
-                            // IMPORTANT: First digit completely replaces current value
-                            editableValue = "0"
-                            isFirstDigit = false
-                        } else {
-                            // Append subsequent digits
-                            editableValue += "0"
-                        }
-                    }) {
-                        Text("0")
-                            .font(.system(size: 24, weight: .medium))
-                            .frame(width: 60, height: 60)
-                            .background(Color.gray.opacity(0.2))
-                            .cornerRadius(30)
-                    }
-                    
-                    // Done button
-                    Button(action: {
-                        // Only save if we have a value
-                        if !editableValue.isEmpty {
-                            onSave(editableValue)
-                        }
-                        presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 24))
-                            .frame(width: 60, height: 60)
-                            .background(Color.green.opacity(0.2))
-                            .cornerRadius(30)
-                    }
-                }
-            }
-            .padding()
+            )
             
             Spacer()
         }
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
         .onAppear {
-            // IMPORTANT: Always reinitialize these values when the view appears
-            // This ensures consistent behavior regardless of how many times the view is used
+            // Reset to empty value when the view appears
             editableValue = ""
-            isFirstDigit = true
         }
         .id(title) // Add a unique ID based on the title to ensure fresh state
     }
@@ -251,18 +191,18 @@ struct TaskCellView: View {
                     }
                     .padding(.leading, 5) // Added padding to offset from edit button
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .helpMetadata(HelpMetadata(
+                    .registerForHelp(
                         id: "task-title",
                         title: "Task Title",
                         description: "The name of the task or routine to complete.",
-                        usageHints: [
+                        hints: [
                             "Tap the row to edit this task",
                             "Swipe left anywhere on the row to decrease completion count",
                             "Different background shades indicate completion progress",
                             "Colored backgrounds indicate task type (blue for tasks, green for routines, red for critical)"
                         ],
                         importance: .informational
-                    ))
+                    )
 
                     // Add the critical indicator before the completion slider if task is critical
                     if task.getCritical() {
@@ -277,18 +217,18 @@ struct TaskCellView: View {
                                 .foregroundColor(.white)
                         }
                         .padding(.horizontal, 4) // Add a small gap between indicator and slider
-                        .helpMetadata(HelpMetadata(
+                        .registerForHelp(
                             id: "critical-indicator",
                             title: "Critical Task Indicator",
                             description: "Indicates this is a high-priority task.",
-                            usageHints: [
+                            hints: [
                                 "Critical tasks are visually highlighted for emphasis",
                                 "Use for important deadlines or must-do tasks",
                                 "Helps you identify your highest priority items",
                                 "Can be set when creating or editing a task"
                             ],
                             importance: .important
-                        ))
+                        )
                     }
                     
                     // Enhanced slider-style completion tracker with swipe gesture

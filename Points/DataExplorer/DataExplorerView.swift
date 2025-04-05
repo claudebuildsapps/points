@@ -429,29 +429,7 @@ struct DataDateDetailView: View {
     }
     
     private func attributeRow(name: String, value: String, color: Color) -> some View {
-        HStack(spacing: 8) {
-            // Key in left column
-            Text(name)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.primary.opacity(0.65))
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(color.opacity(0.1))
-                .cornerRadius(8)
-            
-            // Value in right column
-            Text(value)
-                .font(.subheadline)
-                .foregroundColor(.primary.opacity(0.65))
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .background(color.opacity(0.1))
-                .cornerRadius(8)
-        }
-        .padding(.vertical, 2)
+        AttributeRow(name: name, value: value, color: color)
     }
     
     private func formatDate(_ date: Date?, style: DateFormatter.Style = .medium) -> String {
@@ -593,30 +571,7 @@ struct DataTaskDetailView: View {
     
     private func attributeRow(name: String, value: String, colorIndex: Int) -> some View {
         let color = colors[colorIndex % colors.count]
-        
-        return HStack(spacing: 8) {
-            // Key in left column
-            Text(name)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.primary.opacity(0.65))
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(color.opacity(0.1))
-                .cornerRadius(8)
-            
-            // Value in right column
-            Text(value)
-                .font(.subheadline)
-                .foregroundColor(.primary.opacity(0.65))
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .background(color.opacity(0.1))
-                .cornerRadius(8)
-        }
-        .padding(.vertical, 2)
+        return AttributeRow(name: name, value: value, color: color)
     }
     
     private func ordinalSuffix(for day: Int) -> String {
